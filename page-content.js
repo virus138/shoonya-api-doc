@@ -47,7 +47,7 @@ client = ShoonyaClient(
     SECRET_CODE = os.environ["SHOONYA_SECRET_CODE"],
 )
 session = client.login()
-print("Logged in:", session.susertoken)`)}` },
+print("Logged in:", session.Acesstoken)`)}` },
       { h: "3. Fetch a quote", body: `${codeBlock("python", `quote = client.get_quote(exchange="NSE", token="2885")
 print(quote.tsym, quote.lp)`)}` },
       { h: "4. Place your first order", body: `${codeBlock("python", `order = client.place_order(
@@ -70,7 +70,7 @@ print("Order placed:", order)`)}
     badge: null,
     desc: "The three ways to authenticate against Shoonya, and which one fits your use case.",
     sections: [
-      { h: "Overview", body: `<p>Every Shoonya API call runs against an authenticated session. Shoonya issues a <code>susertoken</code> after a successful login, which you attach to every subsequent request. There is no separate long-lived API key model — the token itself is your credential for the trading day.</p>` },
+      { h: "Overview", body: `<p>Every Shoonya API call runs against an authenticated session. Shoonya issues a <code>Acesstoken</code> after a successful login, which you attach to every subsequent request. There is no separate long-lived API key model — the token itself is your credential for the trading day.</p>` },
       { h: "Which flow should I use?", body: `
       <div class="card-grid">
         <div class="mini-card"><div class="k">Personal script or bot</div><div class="v">Auto Login (TOTP) — see <a href="#" data-nav="auto-login-totp">guide</a></div></div>
@@ -79,10 +79,10 @@ print("Order placed:", order)`)}
         <div class="mini-card"><div class="k">Ending a session</div><div class="v"><a href="#" data-nav="logout">Logout</a></div></div>
       </div>` },
       { h: "Session lifetime", body: `<p>Sessions are valid for the trading day and are invalidated at the daily server reset, regardless of activity. Build your automation to re-authenticate once per day rather than assuming a persistent long-running token.</p>
-      <div class="callout"><b>Convention</b>Every endpoint in this documentation that requires auth expects the token as a Bearer header: <code>Authorization: Bearer &lt;susertoken&gt;</code>.</div>` },
+      <div class="callout"><b>Convention</b>Every endpoint in this documentation that requires auth expects the token as a Bearer header: <code>Authorization: Bearer &lt;Acesstoken&gt;</code>.</div>` },
       { h: "Security notes", body: `<ul>
         <li>Never hardcode <code>password</code>, <code>totp_secret</code>, or <code>api_secret</code> in source control — load them from environment variables or a secrets manager.</li>
-        <li>Treat <code>susertoken</code> as a bearer credential with the same sensitivity as a password: don't log it, don't put it in error messages sent to third-party monitoring tools.</li>
+        <li>Treat <code>Acesstoken</code> as a bearer credential with the same sensitivity as a password: don't log it, don't put it in error messages sent to third-party monitoring tools.</li>
         <li>If you suspect a token has leaked, call <a href="#" data-nav="logout">Logout</a> immediately to invalidate the session rather than waiting for the daily reset.</li>
       </ul>` },
       { h: "Notes", body: `<p>OAuth-specific security considerations (state parameter, PKCE, redirect URI validation) are covered on <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a>.</p>` },
@@ -159,7 +159,7 @@ print(current_otp)  # 6-digit code, valid ~30 seconds`)}` },
     badge: { method: "POST", path: "/NorenWClientAPI/QuickAuth" },
     desc: "Log in programmatically using your password and a generated TOTP code — the standard flow for personal scripts, bots, and terminals.",
     sections: [
-      { h: "Overview", body: `<p>Auto Login authenticates directly with your account credentials plus a live TOTP code, returning a <code>susertoken</code> valid for the trading day. This is the flow almost every single-user integration should use.</p>` },
+      { h: "Overview", body: `<p>Auto Login authenticates directly with your account credentials plus a live TOTP code, returning a <code>Acesstoken</code> valid for the trading day. This is the flow almost every single-user integration should use.</p>` },
       { h: "Purpose", body: `<p>Use this for anything running under your own identity — a strategy engine, a personal dashboard, a backtest runner that also trades live. If you're building a product that logs in <i>other</i> people's accounts, use <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> instead.</p>` },
       { h: "Parameters", body: `
       <table class="param-table">
@@ -203,7 +203,7 @@ console.log(await res.json());`,
       })}` },
       { h: "Response example", body: `${codeBlock("json", `{
   "stat": "Ok",
-  "susertoken": "e1b2c3d4e5f6...",
+  "Acesstoken": "e1b2c3d4e5f6...",
   "uid": "AB1234",
   "actid": "AB1234",
   "email": "user@example.com"
@@ -223,7 +223,7 @@ client = ShoonyaClient(
     vendor_code=VENDOR_CODE, api_secret=API_SECRET, imei="abc1234",
 )
 session = client.login()
-print(session.susertoken)`)}` },
+print(session.Acesstoken)`)}` },
       { h: "Notes", body: `<p>Field names shown follow common NorenOMS conventions — confirm exact casing against your account's onboarding packet before going to production.</p>` },
     ],
   },
@@ -276,7 +276,7 @@ console.log(await res.json());`,
       })}` },
       { h: "Response example", body: `${codeBlock("json", `{
   "stat": "Ok",
-  "susertoken": "e1b2c3d4e5f6...",
+  "Acesstoken": "e1b2c3d4e5f6...",
   "actid": "AB1234",
   "uname": "Trader Name",
   "email": "user@example.com"
@@ -288,155 +288,344 @@ console.log(await res.json());`,
         <tr><td>Invalid_Input</td><td>Missing or malformed field in the request body.</td></tr>
         <tr><td>Session_Expired</td><td>request_code was already used or has expired — restart the authorization flow.</td></tr>
       </table>` },
-      { h: "Best practices", body: `<ul><li>Generate the signature server-side only — never expose <code>api_secret</code> to a browser or mobile client.</li><li>Treat <code>susertoken</code> as a bearer credential: store it encrypted, rotate it via <a href="#" data-nav="token-renewal">Token Renewal</a>, never log it.</li></ul>` },
+      { h: "Best practices", body: `<ul><li>Generate the signature server-side only — never expose <code>api_secret</code> to a browser or mobile client.</li><li>Treat <code>Acesstoken</code> as a bearer credential: store it encrypted, rotate it via <a href="#" data-nav="token-renewal">Token Renewal</a>, never log it.</li></ul>` },
       { h: "Python example", body: `${codeBlock("python", `from shoonya_oauth import ShoonyaOAuthClient
 
 client = ShoonyaOAuthClient(api_key=API_KEY, api_secret=API_SECRET)
 session = client.exchange_code(request_code)
-print(session.susertoken)`)}` },
+print(session.Acesstoken)`)}` },
       { h: "Notes", body: `<p>This endpoint is specific to <a href="#" data-nav="vendors-partners">vendor / partner</a> integrations. Field names shown are illustrative — confirm exact parameter casing against your vendor onboarding packet.</p>` },
     ],
   },
 
   // ---------- C. TRADING APIs ----------
   "place-order": {
-    badge: { method: "POST", path: "/NorenWClientAPI/PlaceOrder" },
-    desc: "Submit a new order for execution on the exchange — market, limit, or stop-loss, across equity, F&O and currency segments.",
-    sections: [
-      { h: "Overview", body: `<p>Place Order is the core trading endpoint: every order type (market, limit, SL-limit, SL-market) and every product (intraday, delivery, margin) routes through this one call, differentiated by parameters.</p>` },
-      { h: "Purpose", body: `<p>Call this endpoint from your strategy engine whenever a signal needs to hit the exchange. Pair it with <a href="#" data-nav="order-book">Order Book</a> to confirm status and <a href="#" data-nav="order-update-feed">Order Update Feed</a> for real-time fills instead of polling.</p>` },
-      { h: "Parameters", body: `
+  badge: { method: "POST", path: "/NorenWClientAPI/PlaceOrder" },
+
+  desc: "Submit a new order for execution on the exchange — limit and stop-loss-limit orders only, across equity, F&O, currency, and commodity segments.",
+
+  sections: [
+
+    // ---------------------------------------------------------------
+    { h: "API Endpoint", body: `
       <table class="param-table">
-        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
-        <tr><td>uid</td><td>string</td><td><span class="req-tag">required</span></td><td>User ID of the logged-in account.</td></tr>
-        <tr><td>actid</td><td>string</td><td><span class="req-tag">required</span></td><td>Account ID placing the order.</td></tr>
-        <tr><td>exch</td><td>string</td><td><span class="req-tag">required</span></td><td>Exchange segment — see <a href="#" data-nav="exchange-segment-codes">Exchange Segment Codes</a>.</td></tr>
-        <tr><td>tsym</td><td>string</td><td><span class="req-tag">required</span></td><td>Trading symbol, e.g. <code>NIFTY24DEC24000CE</code>.</td></tr>
-        <tr><td>qty</td><td>integer</td><td><span class="req-tag">required</span></td><td>Order quantity, in units of the exchange lot size.</td></tr>
-        <tr><td>prc</td><td>number</td><td><span class="opt-tag">optional</span></td><td>Limit price. Ignored for MKT orders.</td></tr>
-        <tr><td>prd</td><td>string</td><td><span class="req-tag">required</span></td><td>Product type — see <a href="#" data-nav="product-type-codes">Product Type Codes</a>.</td></tr>
-        <tr><td>prctyp</td><td>string</td><td><span class="req-tag">required</span></td><td>Order type — see <a href="#" data-nav="order-type-codes">Order Type Codes</a>.</td></tr>
-        <tr><td>trantype</td><td>string</td><td><span class="req-tag">required</span></td><td><code>B</code> (buy) or <code>S</code> (sell) — see <a href="#" data-nav="transaction-type-codes">Transaction Type Codes</a>.</td></tr>
-        <tr><td>ret</td><td>string</td><td><span class="req-tag">required</span></td><td>Validity — <code>DAY</code> or <code>IOC</code>.</td></tr>
-      </table>` },
-      { h: "Request example", body: `${codeTabs("place-order-req", {
-        python: `import requests
+        <tr><td><b>Method</b></td><td><code>POST</code></td></tr>
+        <tr><td><b>URL</b></td><td><code>https://api.shoonya.com/NorenWClientAPI/PlaceOrder</code></td></tr>
+        <tr><td><b>Content-Type</b></td><td><code>application/x-www-form-urlencoded</code></td></tr>
+        <tr><td><b>Payload</b></td><td><code>jData=&lt;JSON payload&gt;&amp;jKey=&lt;AccessToken&gt;</code> — requires a valid <code>AccessToken</code> from <a href="#" data-nav="login">Login</a>.</td></tr>
+      </table>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Overview", body: `
+      <p>Place Order is the core trading endpoint: every supported order type (<code>LMT</code>, <code>SL-LMT</code>) and every product (intraday, delivery, margin) routes through this one call, differentiated by parameters. Call it from your strategy engine whenever a signal needs to hit the exchange, and pair it with <a href="#" data-nav="order-book">Order Book</a> and the <a href="#" data-nav="order-update-feed">Order Update Feed</a> to track state.</p>
+      <div class="callout warn"><b>Not supported</b><code>MKT</code> orders are rejected — only <code>LMT</code> and <code>SL-LMT</code> are accepted. Cover Order (<code>CO</code>) and Bracket Order (<code>BO</code>) are also not available as <code>prd</code> values.</div>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Rate Limits", body: `
+      <p>10 orders/second (OPS) per client, enforced at the OMS layer per SEBI's algo-trading OPS threshold framework.</p>
+      <div class="callout warn"><b>Need more than 10 OPS?</b>Submit your strategy to the exchange for approval and obtain an Algo ID. Once empanelled, higher OPS thresholds apply under the exchange's Algo ID framework.</div>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Parameters", body: `
+      <table class="param-table">
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+          <th>Allowed Values</th>
+        </tr>
+
+        <tr>
+          <td>uid</td>
+          <td>string</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>User ID of the authenticated account.</td>
+          <td>Account-specific</td>
+        </tr>
+
+        <tr>
+          <td>actid</td>
+          <td>string</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>User ID of the authenticated account.</td>
+          <td>Account-specific</td>
+        </tr>
+
+        <tr>
+          <td>exch</td>
+          <td>string</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>Exchange segment. Refer to <a href="#" data-nav="exchange-segment-codes">Exchange Segment Codes</a>.</td>
+          <td><code>NSE</code>, <code>BSE</code>, <code>NFO</code>, <code>BFO</code>, <code>CDS</code>, <code>MCX</code></td>
+        </tr>
+
+        <tr>
+          <td>tsym</td>
+          <td>string</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>Unique id of contract on which order to be placed. (Use the results from Search Script to get the trading symbol &amp; use URL encoding to avoid special-char errors for symbols like <code>M&amp;M</code>.)</td>
+          <td>Must exist in <a href="#" data-nav="instrument-master">Instrument Master</a></td>
+        </tr>
+
+        <tr>
+          <td>qty</td>
+          <td>integer</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>Order quantity. For derivatives, quantity must be in multiples of the exchange lot size.</td>
+          <td>&gt; 0, lot-size multiple for derivatives</td>
+        </tr>
+
+        <tr>
+          <td>prc</td>
+          <td>number</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>Order price. Mandatory for both <code>LMT</code> and <code>SL-LMT</code> orders.</td>
+          <td>&gt; 0, within exchange circuit band</td>
+        </tr>
+
+        <tr>
+          <td>prd</td>
+          <td>string</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>Product type. <code>CO</code> and <code>BO</code> are not supported.</td>
+          <td><code>C</code> (CNC), <code>M</code> (NRML), <code>I</code> (MIS)</td>
+        </tr>
+
+        <tr>
+          <td>prctyp</td>
+          <td>string</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>Order type. <code>MKT</code> orders are not supported.</td>
+          <td><code>LMT</code>, <code>SL-LMT</code></td>
+        </tr>
+
+        <tr>
+          <td>trantype</td>
+          <td>string</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>Transaction type. Refer to <a href="#" data-nav="transaction-type-codes">Transaction Type Codes</a>.</td>
+          <td><code>B</code> (Buy), <code>S</code> (Sell)</td>
+        </tr>
+
+        <tr>
+          <td>ret</td>
+          <td>string</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>Order validity.</td>
+          <td><code>DAY</code>, <code>IOC</code></td>
+        </tr>
+
+        <tr>
+          <td>trgprc</td>
+          <td>number</td>
+          <td><span class="cond-tag">Conditional</span></td>
+          <td>Trigger price. Mandatory when <code>prctyp</code> is set to <code>SL-LMT</code>.</td>
+          <td>&gt; 0; omit when <code>prctyp = LMT</code></td>
+        </tr>
+
+        <tr>
+          <td>dscqty</td>
+          <td>integer</td>
+          <td><span class="opt-tag">Optional</span></td>
+          <td>Disclosed quantity visible to the market.</td>
+          <td>0 to <code>qty</code></td>
+        </tr>
+
+        <tr>
+          <td>remarks</td>
+          <td>string</td>
+          <td><span class="opt-tag">Optional</span></td>
+          <td>User-defined remarks for order tracking and identification.</td>
+          <td>Free text</td>
+        </tr>
+
+        <tr>
+          <td>ordersource</td>
+          <td>string</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>Order source identifier.</td>
+          <td><code>API</code></td>
+        </tr>
+
+        <tr>
+          <td>algo_id</td>
+          <td>string</td>
+          <td><span class="cond-tag">Conditional</span></td>
+          <td>Exchange-approved Algo ID. Mandatory for orders placed under a registered algo strategy per SEBI's algo trading framework; omit for manual/non-algo orders.</td>
+          <td>Exchange-issued</td>
+        </tr>
+      </table>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Request Examples", body: `${codeTabs("place-order-req", {
+      python: `import requests
+import json
 
 payload = {
-    "ordersource": "API",
     "uid": "AB1234",
     "actid": "AB1234",
-    "trantype": "B",
     "exch": "NSE",
     "tsym": "RELIANCE-EQ",
     "qty": "1",
     "dscqty": "0",
     "prc": "180.0",
-    "prd": "C",
-    "prctyp": "LMT",
-    "algo_id": None,
+    "prd": "C",          # C, M, I only — CO/BO not accepted
+    "trantype": "B",
+    "prctyp": "LMT",      # LMT or SL-LMT only — MKT is rejected
     "ret": "DAY",
+    "ordersource": "API",
 }
+data = f"jData={json.dumps(payload)}&jKey={accessToken}"
+
 response = requests.post(
     "https://api.shoonya.com/NorenWClientAPI/PlaceOrder",
-    json=payload,
-    headers={"Authorization": f"Bearer {susertoken}"},
+    data=data,
 )
-print(response.json())`,
-        javascript: `const res = await fetch("https://api.shoonya.com/NorenWClientAPI/PlaceOrder", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: \`Bearer \${susertoken}\`,
-  },
-  body: JSON.stringify({
-    ordersource: "API", uid: "AB1234", actid: "AB1234", exch: "NSE", tsym: "RELIANCE-EQ",
-    qty: "1", prc: "0", prd: "I", prctyp: "LMT", trantype: "B", ret: "DAY",
-  }),
-});
-console.log(await res.json());`,
-        curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/PlaceOrder \\
-  -H "Authorization: Bearer $SUSERTOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{"uid":"AB1234","actid":"AB1234","exch":"NSE","tsym":"RELIANCE-EQ","qty":"1","prc":"0","prd":"I","prctyp":"MKT","trantype":"B","ret":"DAY"}'`,
-      })}` },
-      { h: "Response example", body: `${codeBlock("json", `{
-  "stat": "Ok",
-  "norenordno": "24121500001234"
-}`)}` },
-      { h: "Error handling", body: `
-      <div class="callout warn"><b>Risk checks</b>A rejected order most often means a pre-trade risk check failed — insufficient margin, an RMS block, or a price outside the circuit band. Check <code>emsg</code> in the error response for the exact reason.</div>
-      <table class="param-table">
-        <tr><th>Code</th><th>Meaning</th></tr>
-        <tr><td>Not_Ok</td><td>Order rejected — inspect <code>emsg</code> for the RMS/exchange reason.</td></tr>
-        <tr><td>Session_Expired</td><td>Token invalid or expired — re-authenticate via <a href="#" data-nav="token-renewal">Token Renewal</a>.</td></tr>
-      </table>` },
-      { h: "Best practices", body: `<ul><li>Always check <code>stat</code> before trusting <code>norenordno</code> — a 200 response is not the same as an accepted order.</li><li>Enforce your own client-side risk checks (max qty, max notional) before calling this endpoint — don't rely on server-side RMS as your only guardrail.</li><li>Use idempotency at the strategy layer: a network timeout doesn't mean the order failed to reach the exchange.</li></ul>` },
-      { h: "Python example", body: `${codeBlock("python", `from shoonya_api import ShoonyaClient
+result = response.json()
 
-client = ShoonyaClient(session_token=susertoken)
-order = client.place_order(
-    exchange="NSE", symbol="RELIANCE-EQ", qty=1,
-    order_type="MKT", side="BUY", product="I", validity="DAY",
-)
-print(order.order_id, order.status)`)}` },
-      { h: "Notes", body: `<p>For F&O symbols, <code>tsym</code> must exactly match the string from <a href="#" data-nav="instrument-master">Instrument Master</a> — including the expiry date format and option type suffix.</p>` },
-    ],
-  },
+if result.get("stat") == "Ok":
+    print("Order placed:", result["norenordno"])
+else:
+    print("Order rejected:", result.get("emsg"))`,
 
-  "order-book": {
-    badge: { method: "POST", path: "/NorenWClientAPI/OrderBook" },
-    desc: "Fetch the full list of orders placed today, with current status for each.",
-    sections: [
-      { h: "Overview", body: `<p>Order Book returns every order placed in the current trading session — pending, executed, rejected, or cancelled — as a single array. It's a full-session snapshot, not a delta feed.</p>` },
-      { h: "Purpose", body: `<p>Poll this after placing an order if you need to confirm terminal status and you're not yet consuming <a href="#" data-nav="order-update-feed">Order Update Feed</a>. For anything latency-sensitive, prefer the WebSocket feed — this endpoint is rate-limited like any other <a href="#" data-nav="rate-limits">Market Data</a> call.</p>` },
-      { h: "Parameters", body: `
-      <table class="param-table">
-        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
-        <tr><td>uid</td><td>string</td><td><span class="req-tag">required</span></td><td>User ID of the logged-in account.</td></tr>
-      </table>` },
-      { h: "Request example", body: `${codeTabs("orderbook-req", {
-        python: `import requests
+      javascript: `const payload = {
+  uid: "AB1234",
+  actid: "AB1234",
+  exch: "NSE",
+  tsym: "RELIANCE-EQ",
+  qty: "1",
+  dscqty: "0",
+  prc: "180.0",
+  prd: "C",          // C, M, I only — CO/BO not accepted
+  trantype: "B",
+  prctyp: "LMT",      // LMT or SL-LMT only — MKT is rejected
+  ret: "DAY",
+  ordersource: "API",
+};
 
-headers = {"Authorization": f"Bearer {susertoken}"}
-resp = requests.post("https://api.shoonya.com/NorenWClientAPI/OrderBook",
-                      json={"uid": "AB1234"}, headers=headers)
-print(resp.json())`,
-        javascript: `const res = await fetch("https://api.shoonya.com/NorenWClientAPI/OrderBook", {
-  method: "POST",
-  headers: { "Content-Type": "application/json", Authorization: \`Bearer \${susertoken}\` },
-  body: JSON.stringify({ uid: "AB1234" }),
-});
-console.log(await res.json());`,
-        curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/OrderBook \\
-  -H "Authorization: Bearer $SUSERTOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{"uid":"AB1234"}'`,
-      })}` },
-      { h: "Response example", body: `${codeBlock("json", `[
-  {
-    "norenordno": "24121500001234",
-    "tsym": "RELIANCE-EQ",
-    "trantype": "B",
-    "qty": "1",
-    "status": "COMPLETE",
-    "avgprc": "2934.60",
-    "norentm": "15:12:03"
+const data = \`jData=\${JSON.stringify(payload)}&jKey=\${accessToken}\`;
+
+try {
+  const res = await fetch("https://api.shoonya.com/NorenWClientAPI/PlaceOrder", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: data,
+  });
+  const result = await res.json();
+
+  if (result.stat === "Ok") {
+    console.log("Order placed:", result.norenordno);
+  } else {
+    console.error("Order rejected:", result.emsg);
   }
-]`)}` },
-      { h: "Error handling", body: `<table class="param-table">
-        <tr><th>Code</th><th>Meaning</th></tr>
-        <tr><td>Session_Expired</td><td>Token invalid or expired — re-authenticate via <a href="#" data-nav="token-renewal">Token Renewal</a>.</td></tr>
-      </table>` },
-      { h: "Best practices", body: `<ul><li>Index the response by <code>norenordno</code> client-side rather than scanning the array on every check.</li><li>Treat <code>status</code> values (<code>OPEN</code>, <code>COMPLETE</code>, <code>REJECTED</code>, <code>CANCELED</code>) as the source of truth over any local order state you cache.</li></ul>` },
-      { h: "Python example", body: `${codeBlock("python", `from shoonya_api import ShoonyaClient
+} catch (err) {
+  console.error("Network/timeout error placing order:", err);
+}`,
 
-client = ShoonyaClient(session_token=susertoken)
-for order in client.get_order_book():
-    print(order.norenordno, order.status, order.avgprc)`)}` },
-      { h: "Notes", body: `<p>See <a href="#" data-nav="error-code-reference">Error Code Reference</a> for the full set of rejection reasons that can appear in a completed order's <code>rejreason</code> field.</p>` },
-    ],
-  },
+      curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/PlaceOrder \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
+  --data-urlencode 'jData={"uid":"AB1234","actid":"AB1234","exch":"NSE","tsym":"RELIANCE-EQ","qty":"1","dscqty":"0","prc":"180.0","prd":"C","trantype":"B","prctyp":"LMT","ret":"DAY","ordersource":"API"}' \\
+  --data-urlencode "jKey=$ACCESS_TOKEN"`,
+
+      java: `String jData = "{\\"uid\\":\\"AB1234\\",\\"actid\\":\\"AB1234\\",\\"exch\\":\\"NSE\\","
+    + "\\"tsym\\":\\"RELIANCE-EQ\\",\\"qty\\":\\"1\\",\\"dscqty\\":\\"0\\","
+    + "\\"prc\\":\\"180.0\\",\\"prd\\":\\"C\\",\\"trantype\\":\\"B\\","
+    + "\\"prctyp\\":\\"LMT\\",\\"ret\\":\\"DAY\\",\\"ordersource\\":\\"API\\"}";
+
+String body = "jData=" + URLEncoder.encode(jData, StandardCharsets.UTF_8)
+    + "&jKey=" + URLEncoder.encode(accessToken, StandardCharsets.UTF_8);
+
+HttpClient client = HttpClient.newHttpClient();
+HttpRequest request = HttpRequest.newBuilder()
+    .uri(URI.create("https://api.shoonya.com/NorenWClientAPI/PlaceOrder"))
+    .header("Content-Type", "application/x-www-form-urlencoded")
+    .POST(HttpRequest.BodyPublishers.ofString(body))
+    .build();
+
+HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+System.out.println(response.body());`,
+
+      csharp: `var payload = "{\\"uid\\":\\"AB1234\\",\\"actid\\":\\"AB1234\\",\\"exch\\":\\"NSE\\"," +
+    "\\"tsym\\":\\"RELIANCE-EQ\\",\\"qty\\":\\"1\\",\\"dscqty\\":\\"0\\"," +
+    "\\"prc\\":\\"180.0\\",\\"prd\\":\\"C\\",\\"trantype\\":\\"B\\"," +
+    "\\"prctyp\\":\\"LMT\\",\\"ret\\":\\"DAY\\",\\"ordersource\\":\\"API\\"}";
+
+using var client = new HttpClient();
+var content = new StringContent(
+    $"jData={Uri.EscapeDataString(payload)}&jKey={Uri.EscapeDataString(accessToken)}",
+    Encoding.UTF8,
+    "application/x-www-form-urlencoded");
+
+var response = await client.PostAsync(
+    "https://api.shoonya.com/NorenWClientAPI/PlaceOrder", content);
+Console.WriteLine(await response.Content.ReadAsStringAsync());`,
+    })}` },
+
+    // ---------------------------------------------------------------
+    { h: "Response", body: `
+      ${codeBlock("json", `// Success — HTTP 200
+{ "stat": "Ok", "norenordno": "24121500001234" }
+
+// Rejection — HTTP 200
+{ "stat": "Not_Ok", "emsg": "RMS:Margin Exceeds" }`)}
+      <div class="callout warn"><b>HTTP status alone isn't enough</b>The OMS returns <code>HTTP 200</code> for both accepted and rejected orders — rejection is signalled in the JSON body via <code>stat</code>, not the HTTP status code. Always parse <code>stat</code>; never treat a 200 as confirmation of order placement. Track via <a href="#" data-nav="order-book">Order Book</a> and the <a href="#" data-nav="order-update-feed">Order Update Feed</a>.</div>
+      <table class="param-table">
+        <tr><th>Field</th><th>Description</th></tr>
+        <tr><td>stat</td><td><code>Ok</code> or <code>Not_Ok</code> — always check before trusting <code>norenordno</code>.</td></tr>
+        <tr><td>norenordno</td><td>Order number, present only on success. Track via <a href="#" data-nav="order-book">Order Book</a> and the <a href="#" data-nav="order-update-feed">Order Update Feed</a>.</td></tr>
+        <tr><td>emsg</td><td>Rejection reason, present only on failure — see below.</td></tr>
+      </table>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Common Error Responses", body: `
+      <table class="param-table">
+        <tr><th>Error</th><th>Reason</th><th>Fix</th></tr>
+        <tr><td>Invalid Symbol</td><td><code>tsym</code> not found in Instrument Master, or malformed expiry/option suffix.</td><td>Re-fetch symbol from Instrument Master before ordering.</td></tr>
+        <tr><td>Invalid Quantity</td><td><code>qty</code> is zero, negative, or not a lot-size multiple.</td><td>Round to nearest valid lot multiple.</td></tr>
+        <tr><td>Price Outside Circuit Limit</td><td><code>prc</code> outside the exchange circuit band.</td><td>Fetch current circuit band before pricing.</td></tr>
+        <tr><td>Freeze Quantity Exceeded</td><td><code>qty</code> exceeds the per-order freeze limit.</td><td>Split into multiple orders under the limit.</td></tr>
+        <tr><td>Session Expired</td><td><code>jKey</code>/<code>AccessToken</code> invalid or expired.</td><td>Re-authenticate via <a href="#" data-nav="token-renewal">Token Renewal</a>.</td></tr>
+        <tr><td>Exchange Rejection</td><td>Reached exchange but rejected there (no liquidity for IOC, halted, etc).</td><td>Inspect the exchange-side reason in <code>emsg</code>.</td></tr>
+      </table>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Order Lifecycle", body: `
+      <div class="flow-diagram" style="font-weight:700; font-size:1.05em; letter-spacing:0.02em; line-height:2.4; padding:20px 24px; border:2px solid currentColor; border-radius:8px; font-family:monospace; white-space:normal; word-break:break-word;">
+        Strategy → Place&nbsp;Order&nbsp;API → Shoonya&nbsp;OMS → RMS&nbsp;Check → Exchange → Order&nbsp;Update&nbsp;WebSocket → Filled&nbsp;/&nbsp;Rejected&nbsp;/&nbsp;Cancelled
+      </div>
+      <table class="param-table">
+        <tr><th>State</th><th>Meaning</th></tr>
+        <tr><td>Pending Validation → Open</td><td>Order validated, passed RMS, resting at the exchange.</td></tr>
+        <tr><td>Trigger Pending</td><td><code>SL-LMT</code> waiting for <code>trgprc</code> to be touched.</td></tr>
+        <tr><td>Partially Filled → Complete</td><td>Quantity matching in progress, then fully filled.</td></tr>
+        <tr><td>Rejected</td><td>Failed validation, RMS, or exchange check — see <code>emsg</code>.</td></tr>
+        <tr><td>Cancelled</td><td>Cancelled by client, session logout, or EOD (for DAY orders).</td></tr>
+      </table>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Best Practices", body: `<ul>
+      <li>Always check <code>stat</code> before trusting <code>norenordno</code> — the OMS returns <code>HTTP 200</code> for both accepted and rejected orders, so a successful HTTP call is not confirmation of a placed order.</li>
+      <li>Since <code>MKT</code> isn't supported, price <code>LMT</code> orders with a small buffer beyond the current LTP for reliable fills on liquid symbols.</li>
+      <li>On a network timeout, don't assume the order failed. Shoonya has no dedicated idempotency/client-order-ID field, so tag every order with a unique <code>remarks</code> value at send time, then reconcile against <a href="#" data-nav="order-book">Order Book</a> by matching <code>tsym</code> + <code>qty</code> + <code>remarks</code> before deciding whether to resend.</li>
+      <li>Enforce your own client-side risk checks (max qty, max notional per order) — don't rely on RMS as your only guardrail, since RMS rejections happen after the order has already left your system.</li>
+      <li>Respect the 10 OPS rate limit with a client-side token-bucket limiter; if a strategy needs sustained throughput above that, get it registered for an Algo ID rather than working around the limit.</li>
+      <li>Validate <code>tsym</code> against a freshly-fetched <a href="#" data-nav="instrument-master">Instrument Master</a> immediately before placing F&O orders — don't cache symbols across expiries.</li>
+    </ul>` },
+
+  ],
+},
+
+
+
+
 
   "positions": {
     badge: { method: "POST", path: "/NorenWClientAPI/PositionBook" },
@@ -453,18 +642,18 @@ for order in client.get_order_book():
       { h: "Request example", body: `${codeTabs("positions-req", {
         python: `import requests
 
-headers = {"Authorization": f"Bearer {susertoken}"}
+headers = {"Authorization": f"Bearer {Acesstoken}"}
 resp = requests.post("https://api.shoonya.com/NorenWClientAPI/PositionBook",
                       json={"uid": "AB1234", "actid": "AB1234"}, headers=headers)
 print(resp.json())`,
         javascript: `const res = await fetch("https://api.shoonya.com/NorenWClientAPI/PositionBook", {
   method: "POST",
-  headers: { "Content-Type": "application/json", Authorization: \`Bearer \${susertoken}\` },
+  headers: { "Content-Type": "application/json", Authorization: \`Bearer \${Acesstoken}\` },
   body: JSON.stringify({ uid: "AB1234", actid: "AB1234" }),
 });
 console.log(await res.json());`,
         curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/PositionBook \\
-  -H "Authorization: Bearer $SUSERTOKEN" \\
+  -H "Authorization: Bearer $ACESSTOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{"uid":"AB1234","actid":"AB1234"}'`,
       })}` },
@@ -485,7 +674,7 @@ console.log(await res.json());`,
       { h: "Best practices", body: `<ul><li>Sum <code>rpnl</code> + <code>urmtom</code> for total P&L per instrument — don't rely on either field alone.</li><li>Reconcile positions against your local strategy state at startup and after any reconnect; never assume in-memory state survived a restart.</li></ul>` },
       { h: "Python example", body: `${codeBlock("python", `from shoonya_api import ShoonyaClient
 
-client = ShoonyaClient(session_token=susertoken)
+client = ShoonyaClient(session_token=Acesstoken)
 positions = client.get_positions()
 total_pnl = sum(float(p.rpnl) + float(p.urmtom) for p in positions)
 print("Total P&L:", total_pnl)`)}` },
@@ -510,7 +699,7 @@ print("Total P&L:", total_pnl)`)}` },
         python: `import requests
 
 params = {"exch": "NSE", "token": "2885"}
-headers = {"Authorization": f"Bearer {susertoken}"}
+headers = {"Authorization": f"Bearer {Acesstoken}"}
 
 resp = requests.get(
     "https://api.shoonya.com/NorenWClientAPI/GetQuotes",
@@ -519,11 +708,11 @@ resp = requests.get(
 print(resp.json())`,
         javascript: `const res = await fetch(
   "https://api.shoonya.com/NorenWClientAPI/GetQuotes?exch=NSE&token=2885",
-  { headers: { Authorization: \`Bearer \${susertoken}\` } }
+  { headers: { Authorization: \`Bearer \${Acesstoken}\` } }
 );
 console.log(await res.json());`,
         curl: `curl "https://api.shoonya.com/NorenWClientAPI/GetQuotes?exch=NSE&token=2885" \\
-  -H "Authorization: Bearer $SUSERTOKEN"`,
+  -H "Authorization: Bearer $Acesstoken"`,
       })}` },
       { h: "Response example", body: `${codeBlock("json", `{
   "stat": "Ok",
@@ -544,7 +733,7 @@ console.log(await res.json());`,
       { h: "Best practices", body: `<ul><li>Cache the instrument token lookup locally — don't re-resolve symbol → token on every quote request.</li><li>For more than a handful of symbols, batch via the WebSocket feed rather than issuing parallel REST calls.</li></ul>` },
       { h: "Python example", body: `${codeBlock("python", `from shoonya_api import ShoonyaClient
 
-client = ShoonyaClient(session_token=susertoken)
+client = ShoonyaClient(session_token=Acesstoken)
 quote = client.get_quote(exchange="NSE", token="2885")
 print(quote.ltp, quote.open, quote.high, quote.low)`)}` },
       { h: "Notes", body: `<p>Prices are strings in the raw API response (to preserve exchange-precision formatting) — cast to <code>Decimal</code> rather than <code>float</code> in Python to avoid rounding drift.</p>` },
@@ -572,18 +761,18 @@ print(quote.ltp, quote.open, quote.high, quote.low)`)}` },
         python: `import requests
 
 params = {"exch": "NFO", "tsym": "NIFTY", "strprc": "24000", "cnt": "10"}
-headers = {"Authorization": f"Bearer {susertoken}"}
+headers = {"Authorization": f"Bearer {Acesstoken}"}
 resp = requests.post("https://api.shoonya.com/NorenWClientAPI/GetOptionChain",
                       json=params, headers=headers)
 print(resp.json())`,
         javascript: `const res = await fetch("https://api.shoonya.com/NorenWClientAPI/GetOptionChain", {
   method: "POST",
-  headers: { "Content-Type": "application/json", Authorization: \`Bearer \${susertoken}\` },
+  headers: { "Content-Type": "application/json", Authorization: \`Bearer \${Acesstoken}\` },
   body: JSON.stringify({ exch: "NFO", tsym: "NIFTY", strprc: "24000", cnt: "10" }),
 });
 console.log(await res.json());`,
         curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/GetOptionChain \\
-  -H "Authorization: Bearer $SUSERTOKEN" \\
+  -H "Authorization: Bearer $Acesstoken" \\
   -H "Content-Type: application/json" \\
   -d '{"exch":"NFO","tsym":"NIFTY","strprc":"24000","cnt":"10"}'`,
       })}` },
@@ -601,7 +790,7 @@ console.log(await res.json());`,
       { h: "Best practices", body: `<ul><li>Cache the chain per underlying+expiry for the session — strikes and tokens don't change intraday, only prices do.</li><li>Use <a href="#" data-nav="expiry-data">Expiry Data</a> first to confirm the exact expiry string format before requesting the chain.</li></ul>` },
       { h: "Python example", body: `${codeBlock("python", `from shoonya_api import ShoonyaClient
 
-client = ShoonyaClient(session_token=susertoken)
+client = ShoonyaClient(session_token=Acesstoken)
 chain = client.get_option_chain(exchange="NFO", symbol="NIFTY", strike=24000, count=10)
 atm_ce = next(c for c in chain if c.strprc == 24000 and c.optt == "CE")
 print(atm_ce.tsym, atm_ce.lp, atm_ce.oi)`)}` },
@@ -618,7 +807,7 @@ print(atm_ce.tsym, atm_ce.lp, atm_ce.oi)`)}` },
       { h: "Purpose", body: `<p>Use the WebSocket for anything that needs to react to price movement or fills in real time — strategy engines, live dashboards, risk monitors. It replaces polling <a href="#" data-nav="market-quotes">Market Quotes</a> or <a href="#" data-nav="order-book">Order Book</a> in a loop.</p>` },
       { h: "Connection flow", body: `<ol>
         <li>Open a WebSocket connection to <code>wss://api.shoonya.com/NorenWSAPI/</code>.</li>
-        <li>Send a connect frame containing your <code>uid</code> and <code>susertoken</code>.</li>
+        <li>Send a connect frame containing your <code>uid</code> and <code>Acesstoken</code>.</li>
         <li>On acknowledgment, send subscribe frames for the touchline (<a href="#" data-nav="subscribe-market-feed">market feed</a>) and/or order updates.</li>
         <li>Handle incoming ticks; respond to server pings to keep the session alive.</li>
       </ol>` },
@@ -626,7 +815,7 @@ print(atm_ce.tsym, atm_ce.lp, atm_ce.oi)`)}` },
         python: `import websocket, json
 
 def on_open(ws):
-    ws.send(json.dumps({"t": "c", "uid": UID, "susertoken": SUSERTOKEN}))
+    ws.send(json.dumps({"t": "c", "uid": UID, "Acesstoken": Acesstoken}))
 
 def on_message(ws, message):
     print(json.loads(message))
@@ -638,7 +827,7 @@ ws = websocket.WebSocketApp(
 ws.run_forever()`,
         javascript: `const ws = new WebSocket("wss://api.shoonya.com/NorenWS/");
 
-ws.onopen = () => ws.send(JSON.stringify({ t: "c", uid, susertoken }));
+ws.onopen = () => ws.send(JSON.stringify({ t: "c", uid, Acesstoken }));
 ws.onmessage = (event) => console.log(JSON.parse(event.data));`,
         curl: `# WebSocket connections aren't expressible in cURL —
 # use \`websocat\` for a quick command-line test:
@@ -649,7 +838,7 @@ websocat wss://api.shoonya.com/NorenWSTP/`,
       { h: "Best practices", body: `<ul><li>Run one WebSocket connection per process; multiplex symbols over it rather than opening one socket per instrument.</li><li>Process incoming ticks on a separate thread/queue from your order-placement logic so a slow strategy calculation never blocks the read loop.</li></ul>` },
       { h: "Python example", body: `${codeBlock("python", `from shoonya_api import ShoonyaFeed
 
-feed = ShoonyaFeed(uid=UID, session_token=SUSERTOKEN)
+feed = ShoonyaFeed(uid=UID, session_token=Acesstoken)
 feed.on_tick = lambda tick: print(tick.token, tick.ltp)
 feed.connect()
 feed.subscribe(["NSE|2885"])`)}` },
@@ -668,7 +857,7 @@ feed.subscribe(["NSE|2885"])`)}` },
       { h: "Request example", body: `${codeTabs("sdk-req", {
         python: `from shoonya_api import ShoonyaClient
 
-client = ShoonyaClient(session_token=SUSERTOKEN)
+client = ShoonyaClient(session_token=Acesstoken)
 positions = client.get_positions()
 for p in positions:
     print(p.symbol, p.net_qty, p.pnl)`,
@@ -754,7 +943,7 @@ print(order.order_id)`)}` },
       { h: "Reference table", body: `
       <table class="param-table">
         <tr><th>Code</th><th>Category</th><th>Meaning</th><th>Resolution</th></tr>
-        <tr><td>Session_Expired</td><td>Auth</td><td>Token invalid or timed out.</td><td>Re-authenticate via Token Renewal.</td></tr>
+        <tr><td>Session_Expired</td><td>Auth</td><td>Token invalid or timed out.</td><td>Re-authenticate.</td></tr>
         <tr><td>Invalid_Input</td><td>Validation</td><td>A required field is missing or malformed.</td><td>Check parameter table on the specific endpoint.</td></tr>
         <tr><td>Not_Ok</td><td>Business rule</td><td>Request reached the server but was rejected.</td><td>Read <code>emsg</code> for the exact reason (margin, RMS, circuit).</td></tr>
         <tr><td>Rate_Limited</td><td>Throttling</td><td>Too many requests in the current window.</td><td>Back off per Rate Limits and retry with jitter.</td></tr>
