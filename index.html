@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Shoonya API Documentation — Finvasia</title>
+<meta name="description" content="Official API documentation for the Shoonya trading platform by Finvasia. Authenticate, place orders, stream live market data, and build algo trading strategies via REST and WebSocket.">
+<meta property="og:title" content="Shoonya API Documentation">
+<meta property="og:description" content="REST and WebSocket API reference for trading, market data, and account access on Shoonya.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+
+<!-- App stylesheet (design system) -->
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to content</a>
+
+<header class="topbar">
+  <button class="hamburger icon-btn" id="hamburgerBtn" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+ <a href="#" data-nav="introduction" class="brand" aria-label="Shoonya API Docs, go to Introduction">
+    <img width="100" height="40" src="https://prod-shoonya-footers.s3.ap-south-1.amazonaws.com/footer/shoonya-logo.svg" class="logo-img" alt="Shoonya" decoding="async">
+    <span class="full logo-divider">API Docs</span>
+  </a>
+
+  <div class="searchbar" id="searchWrap">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+      <path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <input
+      id="searchInput"
+      type="text"
+      placeholder="Search documentation…"
+      role="combobox"
+      aria-expanded="false"
+      aria-controls="searchResults"
+      aria-autocomplete="list"
+      aria-label="Search documentation"
+      autocomplete="off"
+    >
+    <span class="kbd" aria-hidden="true">⌘K</span>
+    <div class="search-results" id="searchResults" role="listbox" aria-label="Search results"></div>
+  </div>
+
+  <div class="topbar-right">
+    <button class="icon-btn" id="themeBtn" aria-label="Switch to dark theme" aria-pressed="false" title="Toggle color theme">
+      <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v1M12 20v1M4.2 4.2l.7.7M19.1 19.1l.7.7M3 12h1M20 12h1M4.2 19.8l.7-.7M19.1 4.9l.7-.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/></svg>
+    </button>
+    <a class="gh-link"
+       href="https://github.com/Shoonya-API-OAuth-Python/Shoonya_API_OAuth"
+       target="_blank"
+       rel="noopener noreferrer">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 .5C5.7.5.9 5.3.9 11.6c0 5 3.2 9.2 7.7 10.7.6.1.8-.2.8-.6v-2.2c-3.1.7-3.8-1.3-3.8-1.3-.5-1.3-1.2-1.7-1.2-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 1.7 2.6 1.2 3.3.9.1-.7.4-1.2.7-1.5-2.5-.3-5.1-1.2-5.1-5.5 0-1.2.4-2.2 1.1-3-.1-.3-.5-1.4.1-2.9 0 0 .9-.3 3 1.1.9-.2 1.8-.4 2.8-.4s1.9.1 2.8.4c2.1-1.4 3-1.1 3-1.1.6 1.5.2 2.6.1 2.9.7.8 1.1 1.8 1.1 3 0 4.3-2.6 5.2-5.1 5.5.4.3.8 1 .8 2v3c0 .3.2.7.8.6 4.5-1.5 7.7-5.7 7.7-10.7C23.1 5.3 18.3.5 12 .5z"/>
+      </svg>
+      <span>GitHub</span>
+    </a>
+  </div>
+</header>
+
+<div class="sidebar-overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Documentation sections"></nav>
+  <main class="main" id="main" tabindex="-1"></main>
+  <aside class="toc" id="toc" aria-label="On this page"><div class="toc-inner"><div class="toc-title">On this page</div><div id="tocList"></div></div></aside>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-cols">
+    <div class="footer-col">
+      <div class="footer-heading">Company</div>
+      <ul>
+        <li><a href="https://shoonya.com/about-us" target="_blank" rel="noopener noreferrer">About Us</a></li>
+        <li><a href="https://shoonya.com/contact-us" target="_blank" rel="noopener noreferrer">Contact Us</a></li>
+        <li><a href="https://shoonya.com/pricing" target="_blank" rel="noopener noreferrer">Pricing</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">Offerings</div>
+      <ul>
+        <li><a href="https://shoonya.com/stocks" target="_blank" rel="noopener noreferrer">Stocks</a></li>
+        <li><a href="https://shoonya.com/ipos" target="_blank" rel="noopener noreferrer">IPOs</a></li>
+        <li><a href="https://shoonya.com/future-options" target="_blank" rel="noopener noreferrer">Future &amp; Options</a></li>
+        <li><a href="https://shoonya.com/currencies" target="_blank" rel="noopener noreferrer">Currencies</a></li>
+        <li><a href="https://shoonya.com/commodities" target="_blank" rel="noopener noreferrer">Commodities</a></li>
+        <li><a href="https://shoonya.com/mutual-funds" target="_blank" rel="noopener noreferrer">Direct Mutual Funds</a></li>
+        <li><a href="https://shoonya.com/mtf" target="_blank" rel="noopener noreferrer">MTF</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">Calculators</div>
+      <ul>
+        <li><a href="https://shoonya.com/calculators/brokerage-calculator" target="_blank" rel="noopener noreferrer">Brokerage</a></li>
+        <li><a href="https://shoonya.com/calculators/sip-calculator" target="_blank" rel="noopener noreferrer">Sip</a></li>
+        <li><a href="https://shoonya.com/calculators/lumpsum-calculator" target="_blank" rel="noopener noreferrer">Lumpsum</a></li>
+        <li><a href="https://shoonya.com/calculators" target="_blank" rel="noopener noreferrer">All Calculators</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">Knowledge Base</div>
+      <ul>
+        <li><a href="https://shoonya.com/document-forms" target="_blank" rel="noopener noreferrer">Document &amp; Forms</a></li>
+        <li><a href="https://shoonya.com/apis" target="_blank" rel="noopener noreferrer">APIs</a></li>
+        <li><a href="https://shoonya.com/fund-transfer" target="_blank" rel="noopener noreferrer">Fund Transfer</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">Services</div>
+      <ul>
+        <li><a href="https://shoonya.com/sensai" target="_blank" rel="noopener noreferrer">SensAI</a></li>
+        <li><a href="https://shoonya.com/ikf" target="_blank" rel="noopener noreferrer">I Know First</a></li>
+        <li><a href="https://shoonya.com/shoonya-trading-platform" target="_blank" rel="noopener noreferrer">Shoonya Trading Platform</a></li>
+        <li><a href="https://shoonya.com/document-forms?tab=tools" target="_blank" rel="noopener noreferrer">Tools</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">Resources</div>
+      <ul>
+        <li><a href="https://blog.shoonya.com/" target="_blank" rel="noopener noreferrer">Blogs</a></li>
+        <li><a href="https://faq.shoonya.com/" target="_blank" rel="noopener noreferrer">FAQs</a></li>
+        <li><a href="https://shoonya.com/announcements" target="_blank" rel="noopener noreferrer">Announcements</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">Contact Us</div>
+      <ul>
+        <li><a href="tel:+918288826999">+91 828 882 6999</a></li>
+        <li><a href="mailto:invest@shoonya.com">invest@shoonya.com</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-legal">
+    <p class="footer-entity"><strong>Finvasia Securities Private Limited</strong></p>
+    <p>Reg. Address: #1108, Sector 21-B, Chandigarh – 160022</p>
+    <p>Head Office: Finvasia Tower, C-214, 4th Floor, Phase 8B, Sector 74, Industrial Focal Point, SAS Nagar (Mohali), Punjab – 160055</p>
+    <p>Corporate Office: Finvasia Securities Private Limited, 23rd Floor, Sunshine Tower, Plot No. 616, Senapati Bapat Marg, Dadar West, Parel, Mumbai, Maharashtra – 400013, India</p>
+    <p>NSE Clearing Member: M51912, NSE Member Code: 14846, BSE Member Code: 4043, MCX Member ID: 55135.</p>
+    <p>SEBI Reg: INZ000176037 (Cash, F&amp;O, CDS, Commodity), AMFI ARN: 103331, CDSL DP ID: 12084300, SEBI Regn: IN-DP-317-2017</p>
+    <p>Research Analyst SEBI Regn. No. INH000011927</p>
+    <p><a href="https://smartodr.in/login" target="_blank" rel="noopener noreferrer">Smart Online Dispute Resolution</a> | <a href="https://faq.shoonya.com/support-and-general/what-is-the-grievance-redressal-policy-of-shoonya-by-finvasia/" target="_blank" rel="noopener noreferrer">Grievances Redressal Mechanism</a></p>
+
+    <details class="footer-disclosures">
+      <summary>Attention Investors &amp; Disclosures</summary>
+      <p>“Prevent unauthorized transactions in your account -&gt; Update your mobile numbers/email IDs with your stock brokers and Depository Participant. Receive information of your transactions directly from Exchange on your mobile/email at the end of the day. Issued in the interest of investors” KYC is one time exercise while dealing in securities markets – once KYC is done through a SEBI registered intermediary (Broker, DP, Mutual Fund etc.), you need not undergo the same process again when you approach another intermediary.</p>
+      <p>“No need to issue cheques by investors while subscribing to IPO. Just write the bank account number and sign in the application form to authorise your bank to make payment in case of allotment. No worries for refund as the money remains in investor's account.”</p>
+      <p>Stock Brokers can accept securities as margin from clients only by way of pledge in the depository system w.e.f. September 01, 2020.</p>
+      <p>Update your email id and mobile number with your stock broker / depository participant and receive OTP directly from depository on your email id and/or mobile number to create pledge.</p>
+      <p>Check your securities / MF / bonds in the consolidated account statement issued by NSDL/CDSL every month.</p>
+      <p>Smart Online Dispute Resolution: SEBI has established an <a href="https://smartodr.in/login" target="_blank" rel="noopener noreferrer">Online Dispute Resolution Portal (ODR Portal)</a> for resolving disputes in the Indian Securities Market. This <a href="https://www.sebi.gov.in/legal/master-circulars/dec-2023/master-circular-for-online-resolution-of-disputes-in-the-indian-securities-market_80236.html" target="_blank" rel="noopener noreferrer">circular</a> streamlines the existing dispute resolution mechanism, offering online conciliation and arbitration, benefiting investors and listed companies.</p>
+      <p><strong>For NSE</strong> — <a href="https://www.nseindia.com/trade/members-client-registration-documents" target="_blank" rel="noopener noreferrer">Please click the link to download Rights and Obligation, RDD, Guidance Note in Vernacular Language</a></p>
+      <p><strong>For MCX</strong> — <a href="https://www.mcxindia.com/membership/members-compliance/vernacular-language" target="_blank" rel="noopener noreferrer">Please click the link to download Rights and Obligation, RDD, Guidance Note in Vernacular Language</a></p>
+      <p>Procedure to file a complaint on SEBI SCORES: <a href="https://scores.sebi.gov.in/" target="_blank" rel="noopener noreferrer">Register on SCORES portal</a>. Mandatory details for filing complaints on SCORES: Name, PAN, Address, Mobile Number, E-mail ID. Benefits: Effective Communication, Speedy redressal of the grievances.</p>
+    </details>
+
+    <p class="footer-disclaimer">Investments in securities market are subject to market risks, read all the related documents carefully before investing.</p>
+
+    <div class="footer-linkrow">
+      <span class="footer-linkrow-label">Important links:</span>
+      <a href="https://www.sebi.gov.in/" target="_blank" rel="noopener noreferrer">SEBI</a>
+      <a href="https://www.bseindia.com/" target="_blank" rel="noopener noreferrer">BSE</a>
+      <a href="https://www.nseindia.com/" target="_blank" rel="noopener noreferrer">NSE</a>
+      <a href="https://www.mcxindia.com/" target="_blank" rel="noopener noreferrer">MCX</a>
+      <a href="https://www.cdslindia.com/" target="_blank" rel="noopener noreferrer">CDSL</a>
+      <a href="https://smartodr.in/login" target="_blank" rel="noopener noreferrer">ODR Portal</a>
+      <a href="https://www.evotingindia.com/" target="_blank" rel="noopener noreferrer">e-Voting for Shareholders</a>
+    </div>
+
+    <div class="footer-linkrow">
+      <a href="https://shoonya.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+      <a href="https://shoonya.com/policies-procedures" target="_blank" rel="noopener noreferrer">Policies &amp; Procedures</a>
+      <a href="https://shoonya.com/conflict-of-interest" target="_blank" rel="noopener noreferrer">Conflicts of Interest</a>
+      <a href="https://shoonya.com/rms-policy" target="_blank" rel="noopener noreferrer">Risk Disclosure</a>
+      <a href="https://shoonya.com/api-terms-of-use" target="_blank" rel="noopener noreferrer">API Terms &amp; Conditions</a>
+      <a href="https://shoonya.com/terms-and-conditions" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a>
+    </div>
+
+    <p class="footer-copy"><a href="https://shoonya.com/" target="_blank" rel="noopener noreferrer">© shoonya.com All Rights Reserved</a></p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem("theme"); } catch (e) { /* opaque origin / storage blocked */ }
+  var theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+})();
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+<script src="nav-data.js"></script>
+<script src="page-content.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
