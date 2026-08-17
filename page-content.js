@@ -1,5 +1,3 @@
-
-
 const PAGE_CONTENT = {
 
   // ---------- A. GETTING STARTED ----------
@@ -816,6 +814,34 @@ else:
     { h: "Token lifetime", body: `<p><!-- TODO: confirm and state the actual expiry window here (e.g. "tokens are valid until end of trading day" / "expire after N hours") once confirmed with the API team, so users know how often to re-login. --></p>` },
 
     { h: "Planning around this?", body: `<p>If you're building something that needs a session to stay alive unattended for long periods, plan for scheduled re-login rather than a renewal call — the login flow itself is quick to automate (see the <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> page and the checksum calculator on that page).</p>` },
+  ],
+},
+
+
+  "vendors-partners": {
+  badge: null,
+  desc: "Integration path for vendors and platform partners building on Shoonya's API on behalf of their own users.",
+  sections: [
+    { h: "Overview", body: `<p>Vendors and algo platforms integrating with Shoonya connect via a dedicated OAuth partner flow, separate from an individual user's own <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a>. A vendor integration lets your platform's users authenticate against their own Shoonya account without your platform ever handling their raw credentials.</p>` },
+    { h: "Currently integrated vendors", body: `
+    <table class="param-table">
+      <tr><th>Vendor</th><th>Status</th><th>Static IP required for end users?</th></tr>
+      <tr><td>AlgoTest</td><td>Integrated</td><td>No</td></tr>
+      <tr><td>Quantman</td><td>Integrated</td><td>No</td></tr>
+      <tr><td>Quantiply</td><td>Integrated</td><td>No</td></tr>
+      <tr><td>GoCharting</td><td>In progress</td><td>No (once live)</td></tr>
+      <tr><td>Tradetron</td><td>Integrated</td><td><strong>Yes — mandatory</strong></td></tr>
+    </table>
+    <p>For AlgoTest, Quantman, Quantiply, and (once live) GoCharting, the vendor's own integration handles connectivity at the platform level — individual end users of these platforms do <strong>not</strong> need to submit a static IP address to trade through Shoonya. Tradetron is the exception: its integration model requires every end user to register a static IP before their orders will be accepted, same as a standalone <a href="#" data-nav="manual-login-oauth">OAuth</a> user.</p>` },
+    { h: "OAuth authorize URL", body: `<p>Vendors initiate the login flow by directing their users to Shoonya's OAuth authorize endpoint:</p>
+    ${codeBlock("text", `https://api.shoonya.com/OAuthlogin/authorize/oauth?client_id=Your_app_key`)}
+    <p>Replace <code>Your_app_key</code> with the app key issued to your vendor integration. After the user authenticates, Shoonya redirects back to your registered redirect URL with an authorization code, which your backend then exchanges for an access token — see <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for the full code-exchange sequence.</p>` },
+    { h: "Getting integrated", body: `<ul>
+      <li>New vendor integrations require coordination with the API support team before going live — reach out to get an <code>app_key</code> issued and your redirect URL registered.</li>
+      <li>Confirm with the team whether your platform's user base falls into the static-IP-required category (like Tradetron) or the exempt category (like AlgoTest/Quantman/Quantiply) — this depends on the specific integration model agreed during onboarding, not solely on request volume.</li>
+      <li>If your platform expects order volume near or above the <a href="#" data-nav="rate-limits">10 OPS threshold</a>, that needs to be flagged during onboarding as well, since it affects Algo ID classification per user.</li>
+    </ul>` },
+    { h: "Related", body: `<p>See <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for the token exchange steps following redirect, and <a href="#" data-nav="rate-limits">Rate Limits</a> for the quota/compliance context relevant to high-volume vendor traffic.</p>` },
   ],
 },
 
