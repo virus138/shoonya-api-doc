@@ -1,8 +1,3 @@
-// ===== SIDEBAR NAVIGATION STRUCTURE =====
-// This is the single source of truth for the sidebar. Add/remove/reorder
-// items here — the sidebar, search index, breadcrumbs and prev/next footer
-// links are all generated from this array automatically.
-
 const NAV = [
   {
     id: "getting-started",
@@ -109,15 +104,6 @@ const NAV = [
   },
 ];
 
-// Flat lookup maps built from NAV, used by app.js
-//
-// These use Object.create(null) instead of {} so they have no prototype
-// chain. A plain {} would let a crafted URL like "#/__proto__" or
-// "#/constructor" resolve to a truthy built-in object instead of
-// undefined, which would slip past "is this a real slug?" checks and
-// crash the renderer (or worse, on older/less careful code paths, enable
-// prototype pollution). Object.create(null) makes bracket lookups of
-// unknown keys reliably return undefined.
 const SLUG_TO_ITEM = Object.create(null);
 const SLUG_TO_SECTION = Object.create(null);
 const FLAT_ORDER = [];
@@ -133,7 +119,4 @@ NAV.forEach(section => {
     FLAT_ORDER.push(item.slug);
   });
 });
-
-// Freeze so nothing downstream can accidentally mutate the nav model at
-// runtime (e.g. a bug in search/render code doing SLUG_TO_ITEM[x] = y).
 Object.freeze(FLAT_ORDER);
