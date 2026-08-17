@@ -3,13 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<!-- Runs synchronously, before body paint, so the saved/OS theme applies
-     before anything is drawn. Previously this was inline at the END of
-     <body> (after the entire footer), which painted light-mode first and
-     then flashed to dark — see audit finding BUG-04. Also now external
-     rather than inline so it can execute under the CSP's script-src (no
-     'unsafe-inline'). -->
+     
 <script src="theme-init.js"></script>
 
 <title>Shoonya API Documentation — Finvasia</title>
@@ -19,12 +13,6 @@
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary">
 
-<!-- No CSP existed in the shipped HTML even though app.js's checksum-calculator
-     comments describe CSP as "the main XSS defense; this JS can't do this part".
-     That defense was never actually present — see security audit finding SEC-01.
-     script-src omits 'unsafe-inline'/'unsafe-eval' on purpose: every script in
-     this app is already an external file or a non-inline <script> block, so a
-     strict policy costs nothing and blocks injected inline payloads outright. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
   script-src 'self' https://cdnjs.cloudflare.com;
