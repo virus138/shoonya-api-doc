@@ -1,11 +1,3 @@
-/* =========================================================================
-   Shoonya API Docs — design tokens
-   Palette kept to the existing Shoonya brand marks (orange + green) but
-   pulled out of the diagonal wash background and reserved for two jobs
-   only: the top accent rule (brand signature) and semantic state (POST
-   badges, success). Everything else is a quiet neutral scale so the
-   brand color reads as intentional, not decorative.
-   ========================================================================= */
 :root{
   /* --- brand (used sparingly) --- */
   --brand-orange:#F0941F;
