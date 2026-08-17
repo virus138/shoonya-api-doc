@@ -1,24 +1,6 @@
-// ===== APP: routing, rendering, search, theme =====
-//
-// Everything here uses event delegation on stable ancestor elements
-// (document / mainEl / sidebarEl) because page content, tabs, and the
-// copy button are re-created on every navigation. Attaching listeners
-// directly to those elements would silently stop working after the
-// first render — this is also why page-content.js must NEVER use
-// inline onclick="..." handlers referencing globals: see the note at
-// the top of the "helpers" section in page-content.js.
-
 (function () {
   "use strict";
 
-  /* ---------------------------------------------------------------------
-     Boot guards — fail loudly instead of throwing deep inside a render.
-     NB: nav-data.js/page-content.js declare their data with top-level
-     `const`, which (per spec) is NOT attached to `window` even though
-     it's reachable as a bare identifier in later same-page <script>
-     tags — so this check must reference the identifiers directly rather
-     than via `window[...]`, or it would always report them missing.
-     ------------------------------------------------------------------ */
   var missingGlobal = [];
   if (typeof NAV === "undefined") missingGlobal.push("NAV");
   if (typeof SLUG_TO_ITEM === "undefined") missingGlobal.push("SLUG_TO_ITEM");
@@ -58,8 +40,6 @@
      Small utilities
      ------------------------------------------------------------------ */
 
-  // Safe localStorage wrapper — private browsing / disabled storage /
-  // storage quota errors should never crash the app.
   var storage = {
     get: function (key) {
       try { return window.localStorage.getItem(key); }
@@ -579,104 +559,10 @@
       searchInput.select();
     }
   });
+  
 
-  /* ---------------------------------------------------------------------
-     GenAcsTok checksum calculator
-     (lives on the "manual-login-oauth" page; delegated on `document`
-     since the calculator's inputs are added/removed as the user navigates)
-     ------------------------------------------------------------------ */
-  // async function sha256Hex(message) {
-  //   var enc = new TextEncoder().encode(message);
-  //   var hashBuffer = await crypto.subtle.digest("SHA-256", enc);
-  //   return Array.prototype.map
-  //     .call(new Uint8Array(hashBuffer), function (b) { return b.toString(16).padStart(2, "0"); })
-  //     .join("");
-  // }
-
-  // document.addEventListener("click", function (e) {
-  //   if (!(e.target && e.target.id === "cc-calc-btn")) return;
-  //   var btn = e.target;
-  //   if (btn.disabled) return; // ignore re-entrant clicks while a hash is in flight
-
-  //   var clientIdEl = document.getElementById("cc-client-id");
-  //   var secretEl = document.getElementById("cc-secret");
-  //   var codeEl = document.getElementById("cc-code");
-  //   var output = document.getElementById("cc-output");
-  //   if (!clientIdEl || !secretEl || !codeEl || !output) {
-  //     console.error("[app.js] Checksum calculator markup is incomplete.");
-  //     return;
-  //   }
-
-  //   var clientId = clientIdEl.value.trim();
-  //   var secret = secretEl.value.trim();
-  //   var code = codeEl.value.trim();
-
-  //   if (!clientId || !secret || !code) {
-  //     output.value = "Fill in all three fields first";
-  //     return;
-  //   }
-  //   if (!window.isSecureContext || !window.crypto || !window.crypto.subtle) {
-  //     output.value = "Error: this page must be served over HTTPS (or localhost) for the checksum calculator to work";
-  //     return;
-  //   }
-
-  //   btn.disabled = true;
-  //   output.value = "Calculating\u2026";
-
-  //   sha256Hex(clientId + secret + code)
-  //     .then(function (hash) { output.value = hash; })
-  //     .catch(function (err) {
-  //       console.error("[app.js] Checksum calculation failed:", err);
-  //       output.value = "Error: could not compute checksum (see console)";
-  //     })
-  //     .finally(function () { btn.disabled = false; });
-  // });
-
-
-  /* ---------------------------------------------------------------------
-   Server-side checksum proxy (Node.js / Express)
-   ------------------------------------------------------------------
-   The only way to keep a secret truly hidden from whoever's using the
-   page is to never send it to the browser in the first place. The
-   client sends the two values it's allowed to know (client_id, code);
-   the server holds the real secret (env var / secrets manager) and
-   does the hashing itself, returning only the checksum.
-
-   Client-side call becomes:
-
-     const res = await fetch("/api/checksum", {
-       method: "POST",
-       headers: { "Content-Type": "application/json" },
-       body: JSON.stringify({ clientId, code })
-     });
-     const { checksum } = await res.json();
-
-   No secret ever touches the browser, DevTools, or a heap snapshot.
-   ------------------------------------------------------------------ */
-
-/* ---------------------------------------------------------------------
-   GenAcsTok checksum calculator — secure client-side version
-   ------------------------------------------------------------------
-   Layered defenses, in order of what each one actually stops:
-
-   1. CSP (in the HTML)        -> blocks unauthorized scripts from
-                                   reading this page at all (main XSS
-                                   defense; this JS can't do this part).
-   2. type="password" + opt-out
-      attributes (in the HTML) -> stops session-replay/analytics tools
-                                   and shoulder-surfing from capturing it.
-   3. No logging, ever          -> nothing below writes field values to
-                                   console, network, or storage.
-   4. Wipe after use             -> shrinks the window the value exists
-                                   in the DOM/memory.
-   5. Wipe on tab close/blur     -> covers the "walked away from a
-                                   shared computer" case.
-
-   None of this hides the secret from the person typing it into their
-   own browser — that's not fixable client-side. See server-proxy-
-   example.js for the version that actually keeps it hidden from the
-   page's own visitor.
-   ------------------------------------------------------------------ */
+// GenAcsTok checksum calculator
+    
 
 (function () {
   "use strict";
@@ -750,7 +636,7 @@
   });
 
   // Clear on tab hide / navigation-away / close — covers someone
-  // stepping away from a shared or public machine mid-session.
+ 
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "hidden") clearSecretField();
   });
@@ -772,9 +658,6 @@
 
   /* ---------------------------------------------------------------------
      Postman collection download
-     (button lives on the "postman-collection" page, id="pc-download-btn";
-     delegated the same way as the checksum calculator above, since the
-     button is added/removed from the DOM as the user navigates pages)
      ------------------------------------------------------------------ */
   function pcItem(name, endpoint, opts) {
     opts = opts || {};
