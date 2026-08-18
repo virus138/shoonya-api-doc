@@ -24,6 +24,7 @@ const NAV = [
       { slug: "manual-login-oauth", title: "Manual-Login-Oauth", badge: null },
       { slug: "python-login-selenium", title: "Python Login (Selenium)", badge: null },
       { slug: "token-renewal", title: "Token Renewal", badge: null },
+      { slug: "validate-hs-token", title: "Validate HS Token", badge: "POST" },
       { slug: "vendors-partners", title: "For Vendors / Partners" },
       { slug: "logout", title: "Logout", badge: "POST" },
     ],
@@ -83,7 +84,7 @@ const NAV = [
     label: "SDK Reference",
     items: [
       { slug: "python-sdk", title: "Python SDK" },
-      { slug: "javascript-sdk", title: "JavaScript SDK", badge: "Coming Soon" },
+      { slug: "dotnet-sdk", title: "Dotnet-SDK",},
       { slug: "sdk-code-examples", title: "Code Examples" },
       { slug: "postman-collection", title: "Postman Collection" },
     ],
