@@ -1,5 +1,7 @@
 const PAGE_CONTENT = {
 
+
+
   // ---------- A. GETTING STARTED ----------
   "introduction": {
   badge: null,
@@ -814,6 +816,178 @@ else:
     { h: "Token lifetime", body: `<p><!-- TODO: confirm and state the actual expiry window here (e.g. "tokens are valid until end of trading day" / "expire after N hours") once confirmed with the API team, so users know how often to re-login. --></p>` },
 
     { h: "Planning around this?", body: `<p>If you're building something that needs a session to stay alive unattended for long periods, plan for scheduled re-login rather than a renewal call — the login flow itself is quick to automate (see the <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> page and the checksum calculator on that page).</p>` },
+  ],
+},
+
+// Validate-hs-token
+
+
+  "validate-hs-token": {
+  badge: { method: "POST", path: "/NorenWClientAPI/ValidateHsToken" },
+
+  desc: "Server-to-server check that confirms a LoginId/token pair issued at login is still valid — used to gate access before handing a user off to an external integration such as Back Office.",
+
+  sections: [
+
+    // ---------------------------------------------------------------
+    { h: "API Endpoint", body: `
+      <table class="param-table">
+        <tr><td><b>Method</b></td><td><code>POST</code></td></tr>
+        <tr><td><b>URL</b></td><td><code>https://api.shoonya.com/NorenWClientAPI/ValidateHsToken</code></td></tr>
+        <tr><td><b>Content-Type</b></td><td><code>application/x-www-form-urlencoded</code></td></tr>
+        <tr><td><b>Payload</b></td><td><code>LoginId=&lt;sLoginId&gt;&amp;token=&lt;token&gt;</code> — plain form fields, not a <code>jData</code>/<code>jKey</code> envelope.</td></tr>
+      </table>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Overview", body: `
+      <p>Validate HS Token lets a third-party server confirm that a <code>LoginId</code> and <code>token</code> pair, handed to it by the trading site on redirect, is genuine and still active — before it grants that user access on its own end. This is the check step in an external integration flow: trading site → redirect with credentials → third party validates server-side → third party grants access.</p>
+      <div class="callout warn"><b>Server-to-server only</b>Call this from your backend, never from a browser or a client-side APK. The <code>token</code> is a live session credential — sending this request from the client would expose it in the same request meant to validate it.</div>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Parameters", body: `
+      <table class="param-table">
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+          <th>Allowed Values</th>
+        </tr>
+
+        <tr>
+          <td>LoginId</td>
+          <td>string</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>The <code>sLoginId</code> value received from the Initiator site at login.</td>
+          <td>Account-specific</td>
+        </tr>
+
+        <tr>
+          <td>token</td>
+          <td>string</td>
+          <td><span class="req-tag">Required</span></td>
+          <td>The key obtained on successful login, passed along with <code>LoginId</code> to the third-party URL.</td>
+          <td>Session-specific</td>
+        </tr>
+      </table>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Request Examples", body: `${codeTabs("validate-hs-token-req", {
+      python: `import requests
+
+payload = {
+    "LoginId": "FA12345",
+    "token": "6f1a2c9e-8b3d-4a11-9e77-example-token",
+}
+
+response = requests.post(
+    "https://api.shoonya.com/NorenWClientAPI/ValidateHsToken",
+    data=payload,
+)
+
+# response body is plain text — "TRUE" or "FALSE", not JSON
+is_valid = response.text.strip() == "TRUE"
+print("Token valid:", is_valid)`,
+
+      javascript: `const payload = new URLSearchParams({
+  LoginId: "FA12345",
+  token: "6f1a2c9e-8b3d-4a11-9e77-example-token",
+});
+
+try {
+  const res = await fetch("https://api.shoonya.com/NorenWClientAPI/ValidateHsToken", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: payload,
+  });
+
+  // plain text response — "TRUE" or "FALSE"
+  const text = await res.text();
+  const isValid = text.trim() === "TRUE";
+  console.log("Token valid:", isValid);
+} catch (err) {
+  console.error("Network/timeout error validating token:", err);
+}`,
+
+      curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/ValidateHsToken \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
+  --data-urlencode "LoginId=FA12345" \\
+  --data-urlencode "token=6f1a2c9e-8b3d-4a11-9e77-example-token"`,
+
+      java: `String body = "LoginId=" + URLEncoder.encode("FA12345", StandardCharsets.UTF_8)
+    + "&token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
+
+HttpClient client = HttpClient.newHttpClient();
+HttpRequest request = HttpRequest.newBuilder()
+    .uri(URI.create("https://api.shoonya.com/NorenWClientAPI/ValidateHsToken"))
+    .header("Content-Type", "application/x-www-form-urlencoded")
+    .POST(HttpRequest.BodyPublishers.ofString(body))
+    .build();
+
+HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+// plain text — "TRUE" or "FALSE"
+boolean isValid = response.body().trim().equals("TRUE");
+System.out.println("Token valid: " + isValid);`,
+
+      csharp: `using var client = new HttpClient();
+var content = new FormUrlEncodedContent(new[]
+{
+    new KeyValuePair<string, string>("LoginId", "FA12345"),
+    new KeyValuePair<string, string>("token", accessToken),
+});
+
+var response = await client.PostAsync(
+    "https://api.shoonya.com/NorenWClientAPI/ValidateHsToken", content);
+
+// plain text — "TRUE" or "FALSE"
+var text = (await response.Content.ReadAsStringAsync()).Trim();
+bool isValid = text == "TRUE";
+Console.WriteLine($"Token valid: {isValid}");`,
+    })}` },
+
+    // ---------------------------------------------------------------
+    { h: "Response", body: `
+      ${codeBlock("text", `// Valid — HTTP 200
+TRUE
+
+// Invalid LoginId or token — HTTP 200
+FALSE`)}
+      <div class="callout warn"><b>Plain text, not JSON</b>The response body is the literal string <code>TRUE</code> or <code>FALSE</code> — there is no <code>stat</code>/<code>emsg</code> envelope here, unlike most other endpoints. Compare the trimmed response body directly; don't attempt to JSON-parse it.</div>
+      <table class="param-table">
+        <tr><th>Value</th><th>Meaning</th></tr>
+        <tr><td><code>TRUE</code></td><td>Token is valid for the given LoginId.</td></tr>
+        <tr><td><code>FALSE</code></td><td>Invalid User Id or Token — treat identically to a failed auth check; don't try to distinguish the two causes from the response alone.</td></tr>
+      </table>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "External Integration Flow", body: `
+      <div class="flow-diagram" style="font-weight:700; font-size:1.05em; letter-spacing:0.02em; line-height:2.4; padding:20px 24px; border:2px solid currentColor; border-radius:8px; font-family:monospace; white-space:normal; word-break:break-word;">
+        User&nbsp;clicks&nbsp;link → Trading&nbsp;site&nbsp;passes&nbsp;UserId/Token/ClientId → Third-party&nbsp;server&nbsp;calls&nbsp;Validate&nbsp;HS&nbsp;Token → Trading&nbsp;site&nbsp;confirms&nbsp;TRUE/FALSE → Access&nbsp;granted&nbsp;or&nbsp;denied
+      </div>
+      <table class="param-table">
+        <tr><th>Step</th><th>Detail</th></tr>
+        <tr><td>1. User action</td><td>User clicks a link on the trading site — e.g. "Back Office login".</td></tr>
+        <tr><td>2. Handoff</td><td>Trading site passes <code>User Id</code>, <code>Token</code>, and <code>Client ID</code> to the third-party URL, typically as query params on the redirect.</td></tr>
+        <tr><td>3. Server-side validation</td><td>The third party's own server — not its front end — calls Validate HS Token against the trading site's web server.</td></tr>
+        <tr><td>4. Access decision</td><td>If the trading site returns <code>TRUE</code>, the third-party application grants the user access; on <code>FALSE</code>, it denies it.</td></tr>
+      </table>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Best Practices", body: `<ul>
+      <li>Always validate server-side on receipt of a redirect, even if the trading site's front end already appeared to authenticate the user — the client-side handoff isn't trustworthy on its own.</li>
+      <li>Compare the response body as trimmed plain text (<code>"TRUE"</code>/<code>"FALSE"</code>), not as JSON — this endpoint doesn't follow the <code>stat</code>/<code>emsg</code> convention used elsewhere in the API.</li>
+      <li>Treat <code>FALSE</code> as a hard deny. Don't retry automatically — an expired or invalid token needs the user to re-authenticate from the trading site, not a repeated validation call.</li>
+      <li>Don't cache a <code>TRUE</code> result past the immediate access decision — re-validate on each new redirect rather than trusting a previously-validated token indefinitely, since the underlying session can expire or be invalidated independently. See <a href="#" data-nav="token-renewal">Token Renewal</a>.</li>
+      <li>Confirm your server's egress IP is whitelisted before going live — see <a href="#" data-nav="ip-whitelisting">IP Whitelisting Guide</a>.</li>
+      <li>If you're integrating as a registered vendor rather than a single account holder, coordinate this flow as part of onboarding — see <a href="#" data-nav="vendors-partners">For Vendors / Partners</a> and <a href="#" data-nav="manual-login-oauth">Manual-Login-Oauth</a> for the login handoff that precedes it.</li>
+    </ul>` },
+
   ],
 },
 
@@ -3405,9 +3579,237 @@ if ret != None:
 },
 
 
+// Python SDK
 
   
 
+ 
+
+
+
+
+  
+  "python-sdk": {
+  badge: null,
+
+  desc: "Official Python wrapper for the Shoonya OAuth API — handles the OAuth handshake, and gives typed methods for orders, market data, positions, and the WebSocket feed.",
+
+  sections: [
+
+    // ---------------------------------------------------------------
+    { h: "Overview", body: `
+      <p>The Python SDK (package name <code>NorenRestApiOAuth</code>, class <code>NorenApi</code>) wraps every REST endpoint covered elsewhere in this documentation — orders, market data, positions, holdings, calculators — plus the OAuth login handshake and the WebSocket feed, behind typed Python methods. Use it instead of hand-rolling <code>requests</code> calls against <code>jData</code>/<code>jKey</code> payloads directly.</p>
+      <div class="callout warn"><b>OAuth build, not password login</b>This SDK is built around the <a href="#" data-nav="manual-login-oauth">OAuth login flow</a> — <code>getOAuthURL</code> → <code>getAccessToken</code> → <code>injectOAuthHeader</code>. It is a separate build from the password/TOTP-based <code>NorenApiPy</code> wrapper; don't mix credential styles between the two.</div>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Installation", body: `
+      ${codeBlock("bash", `pip install -r requirements.txt`)}
+      <table class="param-table">
+        <tr><td><b>Repository</b></td><td><a href="https://github.com/Shoonya-API-OAuth-Python/Shoonya_API_OAuth" target="_blank" rel="noopener">github.com/Shoonya-API-OAuth-Python/Shoonya_API_OAuth</a></td></tr>
+        <tr><td><b>Package</b></td><td><code>NorenRestApiOAuth</code></td></tr>
+        <tr><td><b>Primary class</b></td><td><code>NorenApi</code></td></tr>
+        <tr><td><b>Config file</b></td><td><code>cred.yml</code> — holds <code>oauth_url</code>, <code>API_KEY</code>, <code>SECRET_KEY</code>, <code>client_id</code>, <code>UID</code>; <code>Access_token</code> and <code>Account_ID</code> are written back to it after login.</td></tr>
+      </table>
+      <p><b>Dependencies</b> (from <code>requirements.txt</code>):</p>
+      <table class="param-table">
+        <tr><th>Package</th><th>Version</th><th>Purpose</th></tr>
+        <tr><td><code>NorenRestApiOAuth</code></td><td>—</td><td>The core API wrapper — the <code>NorenApi</code> class itself.</td></tr>
+        <tr><td><code>selenium</code></td><td><code>&gt;=4.15.0</code></td><td>Browser automation, used for scripting the OAuth login step rather than requiring a manual browser visit each time.</td></tr>
+        <tr><td><code>webdriver-manager</code></td><td><code>&gt;=4.0.0</code></td><td>Automatically downloads and manages the correct browser driver binary for Selenium.</td></tr>
+        <tr><td><code>pyotp</code></td><td><code>&gt;=2.9.0</code></td><td>Generates TOTP codes programmatically for the 2FA step of an automated login.</td></tr>
+      </table>
+      <div class="callout warn"><b>Selenium is for the login step, not the API calls</b>The <code>NorenApi</code> class itself only needs <code>NorenRestApiOAuth</code>. <code>selenium</code>, <code>webdriver-manager</code>, and <code>pyotp</code> exist to automate the browser-based OAuth handshake (<code>getOAuthURL</code> → login → <code>auth_code</code>) end-to-end — skip them if you're completing that step manually and only need the REST wrapper.</div>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "OAuth & Session Methods", body: `
+      <table class="param-table">
+        <tr>
+          <th>Method</th>
+          <th>Description</th>
+        </tr>
+        <tr><td><code>getOAuthURL(oauth_url, API_KEY)</code></td><td>Builds the login URL from <code>cred.yml</code>. Open it in a browser; after login, the redirect URL carries the <code>auth_code</code>.</td></tr>
+        <tr><td><code>getAccessToken(auth_code, SECRET_KEY, client_id, UID)</code></td><td>Exchanges <code>auth_code</code> for an access token. Returns <code>(access_token, userid, refresh_token, account_id)</code> and writes <code>Access_token</code>/<code>Account_ID</code> back into <code>cred.yml</code>.</td></tr>
+        <tr><td><code>injectOAuthHeader(Access_token, UID, Account_ID)</code></td><td>Attaches the access token to the HTTP headers used by every subsequent call in the session.</td></tr>
+        <tr><td><code>logout()</code></td><td>Terminates the session. Returns <code>{"stat": "Ok", "request_time": ...}</code> on success.</td></tr>
+        <tr><td><code>forgot_passwordOTP(userid, pan)</code></td><td>Triggers OTP-based password reset for the given user.</td></tr>
+      </table>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Available Functionality", body: `
+      <table class="param-table">
+        <tr><th>Category</th><th>Methods</th></tr>
+        <tr><td>Symbols</td><td><code>searchscrip</code>, <code>get_security_info</code>, <code>get_quotes</code>, <code>get_time_price_series</code>, <code>get_daily_price_series</code>, <code>get_option_chain</code></td></tr>
+        <tr><td>Orders & Trades</td><td><code>place_order</code>, <code>modify_order</code>, <code>cancel_order</code>, <code>exit_order</code>, <code>position_product_conversion</code>, <code>get_orderbook</code>, <code>get_tradebook</code>, <code>single_order_history</code></td></tr>
+        <tr><td>Holdings & Limits</td><td><code>get_holdings</code>, <code>get_positions</code>, <code>get_limits</code></td></tr>
+        <tr><td>Calculators</td><td><code>span_calculator</code>, <code>get_option_greek</code></td></tr>
+        <tr><td>WebSocket</td><td><code>start_websocket</code>, <code>subscribe</code>, <code>unsubscribe</code></td></tr>
+      </table>
+      <p>Every method mirrors the field-level request/response contract documented on this site's individual API pages — e.g. <code>place_order</code>'s <code>price_type</code> argument maps to the <code>prctyp</code> field on <a href="#" data-nav="place-order">Place Order</a>. Refer to those pages for allowed values and error responses; the SDK doesn't change the underlying validation rules.</p>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Quick Start Example", body: `${codeTabs("python-sdk-quickstart", {
+      python: `import yaml
+from api_helper import NorenApi
+
+with open("cred.yml") as f:
+    cred = yaml.safe_load(f)
+
+api = NorenApi(host="https://api.shoonya.com/NorenWClientAPI/")
+
+# 1. Get the OAuth login URL, open it, complete login in browser
+login_url = api.getOAuthURL(cred["oauth_url"], cred["API_KEY"])
+print("Login here:", login_url)
+
+# 2. Paste the auth_code from the redirect URL
+auth_code = input("Enter auth_code: ")
+
+# 3. Exchange auth_code for an access token
+acc_tok, uid, ref_tok, actid = api.getAccessToken(
+    auth_code, cred["SECRET_KEY"], cred["client_id"], cred["UID"]
+)
+
+# 4. Inject the token into subsequent requests
+api.injectOAuthHeader(acc_tok, uid, actid)
+
+# 5. Use any wrapped method
+ret = api.get_limits()
+print(ret)`,
+    })}` },
+
+    // ---------------------------------------------------------------
+    { h: "Best Practices", body: `<ul>
+      <li>Treat <code>cred.yml</code> as a secrets file — <code>SECRET_KEY</code>, <code>Access_token</code>, and <code>Account_ID</code> live in it once populated. Never commit it to source control.</li>
+      <li><code>getAccessToken</code> rewrites <code>Access_token</code>/<code>Account_ID</code> in <code>cred.yml</code> on every successful login — build your credential loading to read the file fresh rather than caching it across runs.</li>
+      <li>Call <code>injectOAuthHeader</code> once per session immediately after obtaining the token; every wrapped method depends on it being set first.</li>
+      <li>The SDK's error model mirrors the raw API's <code>stat</code>/<code>emsg</code> convention — always check <code>stat == "Ok"</code> before trusting a response field, the same as with raw REST calls. See <a href="#" data-nav="error-handling">Error Handling</a>.</li>
+      <li>For anything running unattended, pair this with <a href="#" data-nav="token-renewal">Token Renewal</a> — the SDK doesn't auto-refresh an expired access token for you.</li>
+    </ul>` },
+
+  ],
+},
+
+
+"dotnet-sdk": {
+  badge: null,
+
+  desc: ".NET wrapper (NorenRestApiWrapper) for the Shoonya OAuth API — combines REST calls and a WebSocket client behind a callback-based NorenRestApi class.",
+
+  sections: [
+
+    // ---------------------------------------------------------------
+    { h: "Overview", body: `
+      <p>The .NET SDK is a wrapper of the Noren API combining REST calls and WebSocket streaming for trading. It targets <b>.NET Standard 2.0</b>, built on Visual Studio 2019, with a dependency on <b>Newtonsoft.Json 9.0.1</b>. The namespace is <code>NorenRestApiWrapper</code>; the primary class is <code>NorenRestApi</code>.</p>
+      <div class="callout warn"><b>Callback-based, not async/await</b>Every request method takes a delegate — <code>public delegate void OnResponse(NorenResponseMsg Response, bool ok)</code> — rather than returning a <code>Task</code>. Structure your calling code around callbacks, not <code>await</code>, when integrating this SDK.</div>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Installation", body: `
+      <table class="param-table">
+        <tr><td><b>Repository</b></td><td><a href="https://github.com/Shoonya-API-OAuth-Python/ShoonyaApidotNet" target="_blank" rel="noopener">github.com/Shoonya-API-OAuth-Python/ShoonyaApidotNet</a></td></tr>
+        <tr><td><b>Target framework</b></td><td>.NET Standard 2.0</td></tr>
+        <tr><td><b>Dependency</b></td><td>Newtonsoft.Json 9.0.1</td></tr>
+        <tr><td><b>Namespace</b></td><td><code>NorenRestApiWrapper</code></td></tr>
+        <tr><td><b>Primary class</b></td><td><code>NorenRestApi</code></td></tr>
+      </table>
+      <p>Clone the repository and reference the project directly, or pull the compiled dependency from the <code>Deps</code> folder — there's no NuGet package as of this writing. Example projects are included: <code>Example1</code>, <code>Example2_InlineHandler</code>, <code>Example3_Websocket</code>, and <code>Example4_oauth</code> for the OAuth flow specifically.</p>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Initialization", body: `
+      <table class="param-table">
+        <tr><th>Parameter</th><th>Description</th></tr>
+        <tr><td><code>endPoint</code></td><td> https://api.shoonya.com/OAuthlogin/authorize/oauth.</td></tr>
+        <tr><td><code>Appkey</code></td><td>The secret key issued to you — do not append the user ID to it.</td></tr>
+      </table>
+      <p>Create an instance of <code>NorenRestApi</code> to make requests. Every request method takes an <code>OnResponse</code> callback delegate as its first argument.</p>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "OAuth & Session Methods", body: `
+      <table class="param-table">
+        <tr><th>Method</th><th>Description</th></tr>
+        <tr><td><code>SendgetOAuthURL(oauth_url, client_id)</code></td><td>Requests the OAuth provider to initiate verification with the end user. Returns a URL to open in a browser; on success, the redirect provides <code>auth_code</code>.</td></tr>
+        <tr><td><code>SendgetAccessToken(response, endPoint, authCode, secretcode, client_id, uid)</code></td><td>Exchanges <code>auth_code</code> for an access token via the <code>OnResponse</code> callback, returning a <code>GetAccessTokenResponse</code> with <code>access_token</code>, <code>susertoken</code>, <code>refresh_token</code>, and <code>actid</code>.</td></tr>
+        <tr><td><code>SendGetUserDetails(response)</code></td><td>Fetches enabled exchanges, order types, and product types for the logged-in user.</td></tr>
+        <tr><td><code>SendLogout(response)</code></td><td>Terminates the current session.</td></tr>
+        <tr><td><code>SetSession(endpoint, uid, pwd, usertoken)</code></td><td>Initializes the API with an existing session instead of creating a new one via login.</td></tr>
+      </table>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Available Functionality", body: `
+      <table class="param-table">
+        <tr><th>Category</th><th>Methods</th></tr>
+        <tr><td>WatchLists</td><td><code>SendGetMWList</code>, <code>SendGetMarketWatch</code>, <code>SendAddMultiScripsToMW</code>, <code>SendDeleteMultiMWScrips</code></td></tr>
+        <tr><td>Market</td><td><code>SendSearchScrip</code>, <code>SendGetSecurityInfo</code>, <code>GetQuote</code>, time/daily price series, <code>GetOptionChain</code>, <code>GetIndexList</code>, <code>ExchMsg</code>, top-list methods</td></tr>
+        <tr><td>Calculators</td><td><code>span_calculator</code>, <code>get_option_greek</code>, <code>GetBrokerage</code></td></tr>
+        <tr><td>Orders & Trades</td><td><code>SendPlaceOrder</code>, <code>SendModifyOrder</code>, <code>SendCancelOrder</code>, <code>SendExitSNOOrder</code>, <code>SendProductConversion</code>, <code>SendGetOrderMargin</code>, <code>SendGetOrderBook</code>, <code>SendGetTradeBook</code>, <code>SendGetOrderHistory</code>, <code>SendGetMultiLegOrderBook</code>, <code>SendGetPositionBook</code>, <code>SendGetHoldings</code>, <code>SendGetLimits</code></td></tr>
+        <tr><td>Streaming</td><td><code>Connect</code>, <code>SubscribeMarketData</code>, <code>UnSubscribeMarketData</code>, <code>SubscribeOrderUpdate</code></td></tr>
+      </table>
+      <p>Order types beyond a plain <code>LMT</code>/<code>SL-LMT</code> buy/sell are supported here — <code>PlaceOrder</code> covers Cover Orders (<code>prd = H</code>) and Bracket Orders (<code>prd = B</code>) with <code>blprc</code>/<code>bpprc</code>/<code>trailprc</code> fields, unlike the REST <a href="#" data-nav="place-order">Place Order</a> endpoint documented elsewhere on this site, which rejects <code>CO</code>/<code>BO</code>. Confirm which product types your account is enabled for before relying on this.</p>
+    ` },
+
+    // ---------------------------------------------------------------
+    { h: "Quick Start Example", body: `${codeTabs("dotnet-sdk-quickstart", {
+      csharp: `using NorenRestApiWrapper;
+
+// 1. Initialize
+var nApi = new NorenRestApi(endPoint, appKey);
+
+// 2. Get the OAuth login URL, open it, complete login in browser
+string loginUrl = nApi.SendgetOAuthURL(oauth_url, client_id);
+Console.WriteLine("Login here: " + loginUrl);
+
+// 3. Paste the auth_code from the redirect URL, then exchange it
+nApi.SendgetAccessToken(Handlers.OnAppLoginResponse, endPoint, authCode, secretcode, client_id, uid);
+
+// 4. Handle the callback
+public static void OnAppLoginResponse(NorenResponseMsg response, bool ok)
+{
+    var accessTokenRsp = (GetAccessTokenResponse)response;
+    if (accessTokenRsp.stat == "Ok")
+    {
+        string accessToken = accessTokenRsp.access_token;
+        string actid = accessTokenRsp.actid;
+        // Store and use accessToken for subsequent calls
+    }
+}
+
+// 5. Place an order once authenticated
+var order = new PlaceOrder
+{
+    uid = uid,
+    actid = actid,
+    exch = "NSE",
+    tsym = "RELIANCE-EQ",
+    qty = "1",
+    dscqty = "0",
+    prc = "180.5",
+    prd = "C",
+    trantype = "B",
+    prctyp = "LMT",
+    ret = "DAY",
+    ordersource = "API",
+};
+
+nApi.SendPlaceOrder(Handlers.OnResponseNOP, order);`,
+    })}` },
+
+    // ---------------------------------------------------------------
+    { h: "Best Practices", body: `<ul>
+      <li>Design around the callback signature (<code>OnResponse</code>) from the start — retrofitting async/await over a callback-based SDK later is more work than structuring for it up front.</li>
+      <li>Cast the <code>NorenResponseMsg</code> in your callback to the specific response type documented for that call (e.g. <code>GetAccessTokenResponse</code>, <code>PlaceOrderResponse</code>) and check <code>stat == "Ok"</code> before reading any other field.</li>
+      <li>Cover Orders and Bracket Orders (<code>prd = H</code> / <code>B</code>) are supported here but not on the plain REST <a href="#" data-nav="place-order">Place Order</a> endpoint — don't assume feature parity between this SDK and the raw HTTP API when porting code between platforms.</li>
+      <li>Reference the <code>Example4_oauth</code> project in the repository for a complete working OAuth handshake — it's the fastest way to confirm your <code>endPoint</code> and <code>Appkey</code> are configured correctly before writing your own integration.</li>
+      <li>Same as the Python SDK, this wrapper doesn't auto-refresh an expired token — pair it with <a href="#" data-nav="token-renewal">Token Renewal</a> for unattended processes.</li>
+    </ul>` },
+
+  ],
+},
   // ---------- COMPLIANCE & RISK ----------
   "algo-compliance": {
     badge: null,
