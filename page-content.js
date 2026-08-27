@@ -11,7 +11,7 @@ const PAGE_CONTENT = {
       h: "Overview",
       body: `<p>The Shoonya API, powered by Finvasia, gives developers and traders a secure, reliable,
       and high-performance interface to automate trades, access live market data, and manage
-      portfolios programmatically.
+      portfolios programmatically.</p>
       <p>Manual trading doesn't scale, and it doesn't fail gracefully. Automate the workflow instead:
       fewer operational errors, consistent execution, and a system you can actually test. Noren OMS
       was built for the scale of the Indian broking market and is under continuous testing for
@@ -453,7 +453,7 @@ def call_with_backoff(fn, *args, max_retries=5, **kwargs):
     sections: [
       { h: "Overview", body: `<p>Shoonya's programmatic login replaces the SMS/app OTP step with a TOTP (Time-based One-Time Password) secret, the same standard used by Google Authenticator. Once enrolled, your script generates the current OTP locally instead of waiting on an SMS.</p>` },
       { h: "Enrollment steps", body: `<ol>
-        <li>Log in to the Shoonya web terminal and open <b>Profile → API & Automation → TOTP Setup</b>.</li>
+        <li>Log in to the Shoonya web terminal and open <b>Profile → Security → TOTP Setup</b>.</li>
         <li>Scan the displayed QR code with an authenticator app, or copy the raw base32 secret shown below it.</li>
         <li>Enter the 6-digit code your app generates to confirm enrollment.</li>
         <li>Store the base32 secret — this is what your code uses to generate OTPs programmatically. It is shown only once.</li>
@@ -510,7 +510,7 @@ print(current_otp)  # 6-digit code, valid ~30 seconds`)}` },
       <li>If you expect to exceed 10 orders/second, check <strong>"Applicable for more than 10 orders per second"</strong> — see the callout below before enabling this.</li>
       <li>Click <strong>Update</strong> to save.</li>
     </ol>` },
-    { h: "IP address format", body: `<p>Only <strong>IPv4</strong> is supported for the primary/backup IP fields — a compressed or full IPv6 address will be rejected. If your hosting provider only assigns IPv6 by default, provision an IPv4 address (many cloud providers offer this as a paid add-on) rather than attempting to register an IPv6 address here.</p>
+    { h: "IP address format", body: `<p>Only <strong>IPv4 and IPv6 are supported</strong>for the primary/backup IP fields. Both full and compressed IPv6 formats are accepted. For example, <code>2001:0db8:0000:0000:0000:ff00:0042:8329</code> and the compressed format <code>2001:db8::ff00:42:8329</code> are valid IPv6 addresses.</p>
     <div class="callout warn"><b>Static IP required</b>The registered IP must be static. If you're running from a residential/dynamic-IP connection, requests will start failing with an auth/IP error whenever your ISP reassigns your address — host your integration on a server or VPS with a fixed IP instead.</div>` },
     { h: "Order-rate checkbox and Algo ID", body: `<p>The <strong>"Applicable for more than 10 orders per second"</strong> checkbox is not a self-service performance toggle — ~10 orders/sec is the standard per-user order-placement ceiling described on <a href="#" data-nav="rate-limits">Rate Limits</a>. To legitimately exceed it, you must first submit your strategy to the exchange and obtain a SEBI Algo ID; see <a href="#" data-nav="algo-compliance">SEBI Algo ID Framework</a> for the approval process. Checking this box without a corresponding exchange-approved Algo ID does not raise your actual throughput — it only tells Shoonya to expect Algo ID-tagged traffic.</p>` },
     { h: "After whitelisting", body: `<p>Once your IP is registered, continue to <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> to run the authorize → code → checksum → access-token exchange using the Client ID and Secret Code from this screen.</p>` },
@@ -755,7 +755,7 @@ else:
   "uid": "ABC1234",
   "actid": "ABC1234"
 }`)}
-    <p>Use <code>susertoken</code> as the <code>Bearer</code> token in the <code>Authorization</code> header for all subsequent calls — see <a href="#" data-nav="api-structure">API Structure</a>.</p>` },
+    <p>Use <code>AccessToken</code> as the <code>Bearer</code> token in the <code>Authorization</code> header for all subsequent calls — see <a href="#" data-nav="api-structure">API Structure</a>.</p>` },
     { h: "Checksum calculator", body: `
 <div id="checksum-calc" style="border:1px solid #ddd;border-radius:8px;padding:16px;max-width:520px;">
   <div style="margin-bottom:10px;">
@@ -776,7 +776,7 @@ else:
     <input id="cc-output" type="text" readonly style="width:100%;padding:8px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;background:#f7f7f7;font-family:monospace;">
   </div>
 </div>
-<p style="font-size:13px;color:#666;margin-top:8px;">This calculator runs entirely in the browser — nothing is sent to a server. It's provided for local testing/debugging convenience only.</p>
+<p style="font-size:13px;color:#666;margin-top:8px;">This calculator runs entirely in the browser — nothing is sent to a server.</p>
 ` },
  { h: "Related", body: `<p>See <a href="#" data-nav="token-renewal">Token Renewal</a> for refreshing an expired token without a full re-login, and <a href="#" data-nav="logout">Logout</a> for invalidating the token when done.</p>` },
   ],
@@ -2475,7 +2475,837 @@ for p in positions:
     { h: "Notes", body: `<p>Field names are abbreviated per the Noren protocol (<code>rpnl</code> = realized P&L, <code>urmtom</code> = unrealized MTM, <code>cf</code> = carry-forward). Use <a href="#" data-nav="product-conversion">Product Conversion</a> to move a position between intraday and delivery products without squaring off and re-entering.</p>` },
   ],
 },
+  
+  // ---------------------------------------------------------------
+// GTT ORDERS SECTION
+// ---------------------------------------------------------------
 
+"place-gtt-order": {
+  badge: { method: "POST", path: "/NorenWClientAPI/PlaceGTTOrder" },
+
+  desc: "Register a Good-Till-Triggered order: an order that stays dormant until the specified LTP condition is met, at which point it's submitted to the exchange with the given order parameters.",
+
+  sections: [
+
+    { h: "API Endpoint", body: `
+      <table class="param-table">
+        <tr><td><b>Method</b></td><td><code>POST</code></td></tr>
+        <tr><td><b>URL</b></td><td><code>https://api.shoonya.com/NorenWClientAPI/PlaceGTTOrder</code></td></tr>
+        <tr><td><b>Content-Type</b></td><td><code>application/x-www-form-urlencoded</code></td></tr>
+        <tr><td><b>Payload</b></td><td><code>jData=&lt;JSON payload&gt;&amp;jKey=&lt;AccessToken&gt;</code> — requires a valid <code>AccessToken</code> from <a href="#" data-nav="login-flow-overview">Login</a>.</td></tr>
+      </table>
+    ` },
+
+    { h: "Overview", body: `
+      <p>Place GTT Order is a superset of <a href="#" data-nav="set-alert">Set Alert</a>: it carries the same trigger-condition fields (<code>ai_t</code>, <code>d</code>, <code>validity</code>) plus the full order payload (<code>trantype</code>, <code>prctyp</code>, <code>prd</code>, <code>qty</code>, <code>prc</code>, etc.) that gets submitted once the condition fires. Unlike <a href="#" data-nav="place-order">Place Order</a>, <code>prctyp</code> here also allows <code>MKT</code>, <code>DS</code>, <code>2L</code>, and <code>3L</code>.</p>
+    ` },
+
+    { h: "Parameters", body: `
+      <table class="param-table">
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th><th>Allowed Values</th></tr>
+        <tr><td>uid</td><td>string</td><td><span class="req-tag">Required</span></td><td>User ID of the logged-in user.</td><td>Account-specific</td></tr>
+        <tr><td>actid</td><td>string</td><td><span class="req-tag">Required</span></td><td>Login user's account ID.</td><td>Account-specific</td></tr>
+        <tr><td>tsym</td><td>string</td><td><span class="req-tag">Required</span></td><td>Trading symbol.</td><td>Must exist in <a href="#" data-nav="symbol-master">Symbol Master</a></td></tr>
+        <tr><td>exch</td><td>string</td><td><span class="req-tag">Required</span></td><td>Exchange segment.</td><td>See <a href="#" data-nav="exchange-segment-codes">Exchange Segment Codes</a></td></tr>
+        <tr><td>ai_t</td><td>string</td><td><span class="req-tag">Required</span></td><td>Alert type the trigger condition is evaluated against.</td><td>See <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a></td></tr>
+        <tr><td>validity</td><td>string</td><td><span class="req-tag">Required</span></td><td>Validity of the trigger.</td><td><code>DAY</code>, <code>GTT</code></td></tr>
+        <tr><td>d</td><td>string</td><td><span class="opt-tag">Optional</span></td><td>Value compared against LTP to decide when the order fires.</td><td>Numeric string</td></tr>
+        <tr><td>remarks</td><td>string</td><td><span class="req-tag">Required</span></td><td>Free-text message for identification.</td><td>Free text</td></tr>
+        <tr><td>trantype</td><td>string</td><td><span class="req-tag">Required</span></td><td>Transaction type.</td><td><code>B</code> (Buy), <code>S</code> (Sell)</td></tr>
+        <tr><td>prctyp</td><td>string</td><td><span class="req-tag">Required</span></td><td>Order type submitted on trigger.</td><td><code>LMT</code>, <code>MKT</code>, <code>SL-LMT</code>, <code>SL-MKT</code>, <code>DS</code>, <code>2L</code>, <code>3L</code></td></tr>
+        <tr><td>prd</td><td>string</td><td><span class="req-tag">Required</span></td><td>Product type.</td><td><code>C</code>, <code>M</code>, <code>H</code></td></tr>
+        <tr><td>ret</td><td>string</td><td><span class="req-tag">Required</span></td><td>Retention type of the resulting order (options depend on exchange).</td><td><code>DAY</code>, <code>EOS</code>, <code>IOC</code></td></tr>
+        <tr><td>qty</td><td>integer</td><td><span class="req-tag">Required</span></td><td>Order quantity.</td><td>&gt; 0, lot-size multiple for derivatives</td></tr>
+        <tr><td>prc</td><td>number</td><td><span class="req-tag">Required</span></td><td>Order price submitted on trigger.</td><td>&gt; 0</td></tr>
+        <tr><td>dscqty</td><td>integer</td><td><span class="opt-tag">Optional</span></td><td>Disclosed quantity.</td><td>Max 10% (NSE), 50% (MCX)</td></tr>
+      </table>
+    ` },
+
+    { h: "Request Examples", body: `${codeTabs("place-gtt-order-req", {
+      python: `import requests, json
+
+payload = {
+    "uid": "AB1234",
+    "actid": "AB1234",
+    "tsym": "RELIANCE-EQ",
+    "exch": "NSE",
+    "ai_t": "LTP",
+    "validity": "GTT",
+    "d": "2500",
+    "remarks": "gtt-breakout-buy",
+    "trantype": "B",
+    "prctyp": "LMT",
+    "prd": "C",
+    "ret": "DAY",
+    "qty": "1",
+    "prc": "2505.0",
+}
+data = f"jData={json.dumps(payload)}&jKey={accessToken}"
+
+response = requests.post(
+    "https://api.shoonya.com/NorenWClientAPI/PlaceGTTOrder",
+    data=data,
+)
+result = response.json()
+
+if result.get("al_id"):
+    print("GTT order placed:", result["al_id"])
+else:
+    print("GTT order rejected:", result.get("emsg"))`,
+
+      javascript: `const payload = {
+  uid: "AB1234",
+  actid: "AB1234",
+  tsym: "RELIANCE-EQ",
+  exch: "NSE",
+  ai_t: "LTP",
+  validity: "GTT",
+  d: "2500",
+  remarks: "gtt-breakout-buy",
+  trantype: "B",
+  prctyp: "LMT",
+  prd: "C",
+  ret: "DAY",
+  qty: "1",
+  prc: "2505.0",
+};
+const data = \`jData=\${JSON.stringify(payload)}&jKey=\${accessToken}\`;
+
+const res = await fetch("https://api.shoonya.com/NorenWClientAPI/PlaceGTTOrder", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: data,
+});
+const result = await res.json();
+console.log(result.al_id ? \`GTT order placed: \${result.al_id}\` : \`Rejected: \${result.emsg}\`);`,
+
+      curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/PlaceGTTOrder \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
+  --data-urlencode 'jData={"uid":"AB1234","actid":"AB1234","tsym":"RELIANCE-EQ","exch":"NSE","ai_t":"LTP","validity":"GTT","d":"2500","remarks":"gtt-breakout-buy","trantype":"B","prctyp":"LMT","prd":"C","ret":"DAY","qty":"1","prc":"2505.0"}' \\
+  --data-urlencode "jKey=$ACCESS_TOKEN"`,
+    })}` },
+
+    { h: "Response", body: `
+      ${codeBlock("json", `// Success
+{
+  "request_time": "10:02:06 15-04-2021",
+  "stat": "Oi created",
+  "al_id": "210415000000010"
+}
+
+// Failure
+{
+  "stat": "Not_Ok",
+  "emsg": "Session Expired : Invalid Session Key"
+}`)}
+      <table class="param-table">
+        <tr><th>Field</th><th>Description</th></tr>
+        <tr><td>stat</td><td>Success/failure indication (a status string on success, not a plain <code>Ok</code> flag).</td></tr>
+        <tr><td>request_time</td><td>Present only on success.</td></tr>
+        <tr><td>al_id</td><td>Alert ID for this GTT order — needed for <a href="#" data-nav="cancel-gtt-order">Cancel GTT Order</a> and appears in <a href="#" data-nav="pending-gtt-orders">Get Pending GTT Order</a>.</td></tr>
+        <tr><td>emsg</td><td>Present only on failure — e.g. Invalid Input, Session Expired.</td></tr>
+      </table>
+    ` },
+
+    { h: "Best Practices", body: `<ul>
+      <li>Check for <code>al_id</code> in the response before trusting the order is registered — <code>stat</code> is a free-form status string here, not a plain <code>Ok</code>/<code>Not_Ok</code> flag.</li>
+      <li>Confirm the <code>ai_t</code> value against <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a> before every placement — an unsupported alert type fails at request time, not silently.</li>
+      <li>Reconcile with <a href="#" data-nav="pending-gtt-orders">Get Pending GTT Order</a> after placing, the same way you'd reconcile a regular order against <a href="#" data-nav="order-book">Order Book</a> — a GTT order sits dormant for potentially a long time, so don't assume it's still there without checking.</li>
+      <li>Because the resulting order fires whenever the market later crosses your trigger, re-validate <code>prc</code> against the live circuit band and lot size at trigger time in your own monitoring — a GTT order placed weeks earlier can go stale relative to corporate actions, splits, or circuit changes.</li>
+      <li><code>MKT</code> is allowed here even though it's rejected on <a href="#" data-nav="place-order">Place Order</a> — decide deliberately whether you want price protection (<code>LMT</code>) or fill certainty (<code>MKT</code>) once triggered.</li>
+    </ul>` },
+  ],
+},
+
+// ---------------------------------------------------------------
+
+"cancel-gtt-order": {
+  badge: { method: "POST", path: "/NorenWClientAPI/CancelGTTOrder" },
+
+  desc: "Cancel a pending GTT order by its Alert ID before its trigger condition fires.",
+
+  sections: [
+
+    { h: "API Endpoint", body: `
+      <table class="param-table">
+        <tr><td><b>Method</b></td><td><code>POST</code></td></tr>
+        <tr><td><b>URL</b></td><td><code>https://api.shoonya.com/NorenWClientAPI/CancelGTTOrder</code></td></tr>
+        <tr><td><b>Content-Type</b></td><td><code>application/x-www-form-urlencoded</code></td></tr>
+        <tr><td><b>Payload</b></td><td><code>jData=&lt;JSON payload&gt;&amp;jKey=&lt;AccessToken&gt;</code></td></tr>
+      </table>
+    ` },
+
+    { h: "Parameters", body: `
+      <table class="param-table">
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        <tr><td>uid</td><td>string</td><td><span class="req-tag">Required</span></td><td>User ID of the logged-in user.</td></tr>
+        <tr><td>al_id</td><td>string</td><td><span class="req-tag">Required</span></td><td>Alert ID returned by <a href="#" data-nav="place-gtt-order">Place GTT Order</a>.</td></tr>
+      </table>
+    ` },
+
+    { h: "Request Examples", body: `${codeTabs("cancel-gtt-order-req", {
+      python: `import requests, json
+
+payload = {"uid": "AB1234", "al_id": "210415000000010"}
+data = f"jData={json.dumps(payload)}&jKey={accessToken}"
+
+response = requests.post(
+    "https://api.shoonya.com/NorenWClientAPI/CancelGTTOrder",
+    data=data,
+)
+print(response.json())`,
+
+      javascript: `const payload = { uid: "AB1234", al_id: "210415000000010" };
+const data = \`jData=\${JSON.stringify(payload)}&jKey=\${accessToken}\`;
+
+const res = await fetch("https://api.shoonya.com/NorenWClientAPI/CancelGTTOrder", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: data,
+});
+console.log(await res.json());`,
+
+      curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/CancelGTTOrder \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
+  --data-urlencode 'jData={"uid":"AB1234","al_id":"210415000000010"}' \\
+  --data-urlencode "jKey=$ACCESS_TOKEN"`,
+    })}` },
+
+    { h: "Response", body: `
+      ${codeBlock("json", `// Success
+{
+  "request_time": "12:20:01 15-04-2021",
+  "stat": "Oi delete success",
+  "al_id": "210415000000013"
+}
+
+// Failure
+{
+  "stat": "Not_Ok",
+  "emsg": "Session Expired : Invalid Session Key"
+}`)}
+      <table class="param-table">
+        <tr><th>Field</th><th>Description</th></tr>
+        <tr><td>stat</td><td>Success/failure indication (status string on success).</td></tr>
+        <tr><td>al_id</td><td>The cancelled Alert ID, echoed back on success.</td></tr>
+        <tr><td>emsg</td><td>Present only on failure.</td></tr>
+      </table>
+    ` },
+
+    { h: "Best Practices", body: `<ul>
+      <li>Fetch <code>al_id</code> from <a href="#" data-nav="pending-gtt-orders">Get Pending GTT Order</a> right before cancelling if you didn't keep the ID from placement — it's the only key this endpoint accepts.</li>
+      <li>A cancel call on an <code>al_id</code> that has already triggered (and become a live order) will fail — check <a href="#" data-nav="pending-gtt-orders">Get Pending GTT Order</a> first if there's any chance the trigger condition was recently met.</li>
+      <li>Treat <code>stat</code> as a free-form string ("Oi delete success") rather than pattern-matching on an exact value — check for the absence of <code>emsg</code>, or that the returned <code>al_id</code> matches what you sent.</li>
+    </ul>` },
+  ],
+},
+
+// ---------------------------------------------------------------
+
+"pending-gtt-orders": {
+  badge: { method: "POST", path: "/NorenWClientAPI/GetPendingGTTOrder" },
+
+  desc: "Fetch GTT orders that have been placed but whose trigger condition hasn't fired yet.",
+
+  sections: [
+
+    { h: "API Endpoint", body: `
+      <table class="param-table">
+        <tr><td><b>Method</b></td><td><code>POST</code></td></tr>
+        <tr><td><b>URL</b></td><td><code>https://api.shoonya.com/NorenWClientAPI/GetPendingGTTOrder</code></td></tr>
+        <tr><td><b>Content-Type</b></td><td><code>application/x-www-form-urlencoded</code></td></tr>
+        <tr><td><b>Payload</b></td><td><code>jData=&lt;JSON payload&gt;&amp;jKey=&lt;AccessToken&gt;</code></td></tr>
+      </table>
+      <div class="callout warn"><b>Response shape unconfirmed for multiple orders</b>The sample response is a single order object, not an array. Confirm with a live call whether multiple pending GTT orders come back as a list — don't assume the array shape shown for <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a> applies here.</div>
+    ` },
+
+    { h: "Parameters", body: `
+      <table class="param-table">
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        <tr><td>uid</td><td>string</td><td><span class="req-tag">Required</span></td><td>User ID of the logged-in user.</td></tr>
+      </table>
+    ` },
+
+    { h: "Request Examples", body: `${codeTabs("pending-gtt-orders-req", {
+      python: `import requests, json
+
+payload = {"uid": "AB1234"}
+data = f"jData={json.dumps(payload)}&jKey={accessToken}"
+
+response = requests.post(
+    "https://api.shoonya.com/NorenWClientAPI/GetPendingGTTOrder",
+    data=data,
+)
+print(response.json())`,
+
+      javascript: `const payload = { uid: "AB1234" };
+const data = \`jData=\${JSON.stringify(payload)}&jKey=\${accessToken}\`;
+
+const res = await fetch("https://api.shoonya.com/NorenWClientAPI/GetPendingGTTOrder", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: data,
+});
+console.log(await res.json());`,
+
+      curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/GetPendingGTTOrder \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
+  --data-urlencode 'jData={"uid":"AB1234"}' \\
+  --data-urlencode "jKey=$ACCESS_TOKEN"`,
+    })}` },
+
+    { h: "Response", body: `
+      ${codeBlock("json", `// Success
+{
+  "stat": "OK",
+  "ai_t": "LTP_A",
+  "al_id": "210415000000002",
+  "tsym": "ACC-EQ",
+  "exch": "NSE",
+  "token": "22",
+  "Remarks": "test",
+  "validity": "DAY",
+  "actid": "MDHINIT",
+  "trantype": "B",
+  "prctyp": "LMT",
+  "qty": 1,
+  "prc": "1305.00",
+  "prd": "C",
+  "ordersource": "MOB",
+  "d": "1900.00"
+}
+
+// Failure
+{
+  "stat": "Not_Ok",
+  "emsg": "Session Expired : Invalid Session Key"
+}`)}
+      <table class="param-table">
+        <tr><th>Field</th><th>Description</th></tr>
+        <tr><td>stat</td><td>Success/failure indication.</td></tr>
+        <tr><td>al_id</td><td>Alert ID of this pending GTT order.</td></tr>
+        <tr><td>ai_t</td><td>Alert type the trigger is evaluated against.</td></tr>
+        <tr><td>tsym / exch / token</td><td>Symbol, exchange segment, and contract token.</td></tr>
+        <tr><td>validity / d</td><td>Trigger validity and the LTP comparison value.</td></tr>
+        <tr><td>trantype / prctyp / prd / qty / prc</td><td>The order parameters that will be submitted once triggered — same meanings as in <a href="#" data-nav="place-gtt-order">Place GTT Order</a>.</td></tr>
+        <tr><td>emsg</td><td>Present only on failure.</td></tr>
+      </table>
+    ` },
+
+    { h: "Best Practices", body: `<ul>
+      <li>Poll this endpoint periodically (or on reconnect) rather than relying purely on local state — it's your source of truth for which GTT orders are still dormant versus already triggered or cancelled.</li>
+      <li>Confirm the exact response shape with a live account holding 2+ pending GTT orders before writing parsing code — the documented sample shows only a single order object, and this doc doesn't confirm whether multiple orders come back as an array or as repeated top-level fields.</li>
+      <li>Cross-reference <code>al_id</code> values here against your own local record of orders you placed via <a href="#" data-nav="place-gtt-order">Place GTT Order</a> to detect any GTT orders that triggered (and therefore disappeared from this list) since your last check.</li>
+    </ul>` },
+  ],
+},
+
+// ---------------------------------------------------------------
+
+"enabled-gtt-orders": {
+  badge: { method: "POST", path: "/NorenWClientAPI/GetEnabledGTTs" },
+
+  desc: "Fetch the alert types (ai_t values) enabled for your account — call this before Place GTT Order / Set Alert so you send a supported ai_t.",
+
+  sections: [
+
+    { h: "API Endpoint", body: `
+      <table class="param-table">
+        <tr><td><b>Method</b></td><td><code>POST</code></td></tr>
+        <tr><td><b>URL</b></td><td><code>https://api.shoonya.com/NorenWClientAPI/GetEnabledGTTs</code></td></tr>
+        <tr><td><b>Content-Type</b></td><td><code>application/x-www-form-urlencoded</code></td></tr>
+        <tr><td><b>Payload</b></td><td><code>jData=&lt;JSON payload&gt;&amp;jKey=&lt;AccessToken&gt;</code></td></tr>
+      </table>
+      <div class="callout warn"><b>Naming vs. behavior</b>The endpoint name says "GTTs" but the response is a list of enabled <i>alert types</i> (<code>ai_t</code> values), used by both <a href="#" data-nav="place-gtt-order">Place GTT Order</a> and <a href="#" data-nav="set-alert">Set Alert</a> — it does not return your pending GTT orders (that's <a href="#" data-nav="pending-gtt-orders">Get Pending GTT Order</a>). This same endpoint is what "Get Enabled Alert Types" refers to in the Alerts section.</div>
+    ` },
+
+    { h: "Parameters", body: `
+      <table class="param-table">
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        <tr><td>uid</td><td>string</td><td><span class="req-tag">Required</span></td><td>User ID of the logged-in user.</td></tr>
+      </table>
+    ` },
+
+    { h: "Request Examples", body: `${codeTabs("enabled-gtt-orders-req", {
+      python: `import requests, json
+
+payload = {"uid": "AB1234"}
+data = f"jData={json.dumps(payload)}&jKey={accessToken}"
+
+response = requests.post(
+    "https://api.shoonya.com/NorenWClientAPI/GetEnabledGTTs",
+    data=data,
+)
+result = response.json()
+alert_types = [row["ai_t"] for row in result.get("ai_ts", [])]
+print("Enabled alert types:", alert_types)`,
+
+      javascript: `const payload = { uid: "AB1234" };
+const data = \`jData=\${JSON.stringify(payload)}&jKey=\${accessToken}\`;
+
+const res = await fetch("https://api.shoonya.com/NorenWClientAPI/GetEnabledGTTs", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: data,
+});
+const result = await res.json();
+console.log("Enabled alert types:", (result.ai_ts || []).map(r => r.ai_t));`,
+
+      curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/GetEnabledGTTs \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
+  --data-urlencode 'jData={"uid":"AB1234"}' \\
+  --data-urlencode "jKey=$ACCESS_TOKEN"`,
+    })}` },
+
+    { h: "Response", body: `
+      ${codeBlock("json", `// Success
+{
+  "stat": "OK",
+  "request_time": "04062021121503",
+  "ai_ts": [
+    { "ai_t": "ATP" },
+    { "ai_t": "LTP" }
+  ]
+}
+
+// Failure
+{
+  "stat": "Not_Ok",
+  "emsg": "Session Expired : Invalid Session Key"
+}`)}
+      <table class="param-table">
+        <tr><th>Field</th><th>Description</th></tr>
+        <tr><td>stat</td><td><code>OK</code> or <code>Not_Ok</code>.</td></tr>
+        <tr><td>ai_ts</td><td>Array of <code>{ ai_t }</code> objects — the alert types your account can use in <a href="#" data-nav="place-gtt-order">Place GTT Order</a> and <a href="#" data-nav="set-alert">Set Alert</a>.</td></tr>
+        <tr><td>emsg</td><td>Present only on failure.</td></tr>
+      </table>
+    ` },
+
+    { h: "Best Practices", body: `<ul>
+      <li>Cache the result rather than calling this before every <a href="#" data-nav="place-gtt-order">Place GTT Order</a> / <a href="#" data-nav="set-alert">Set Alert</a> call — enabled alert types change rarely, if ever, for a given account.</li>
+      <li>Validate any hardcoded <code>ai_t</code> constant (like <code>"LTP"</code>) against this endpoint at startup rather than assuming it's always enabled — account-level differences are the whole reason this call exists.</li>
+      <li>Don't confuse this with a list of your own live GTT orders — for that, use <a href="#" data-nav="pending-gtt-orders">Get Pending GTT Order</a> instead.</li>
+    </ul>` },
+  ],
+},
+
+// ---------------------------------------------------------------
+
+"unsettled-trading-date": {
+  badge: { method: "POST", path: "/NorenWClientAPI/GetUnSttledTradingDate" },
+
+  desc: "Fetch upcoming trading dates that haven't settled yet — useful for scheduling GTT validity windows and settlement-aware logic.",
+
+  sections: [
+
+    { h: "API Endpoint", body: `
+      <table class="param-table">
+        <tr><td><b>Method</b></td><td><code>POST</code></td></tr>
+        <tr><td><b>URL</b></td><td><code>https://api.shoonya.com/NorenWClientAPI/GetUnSttledTradingDate</code></td></tr>
+        <tr><td><b>Content-Type</b></td><td><code>application/x-www-form-urlencoded</code></td></tr>
+        <tr><td><b>Payload</b></td><td><code>jData=&lt;JSON payload&gt;&amp;jKey=&lt;AccessToken&gt;</code></td></tr>
+      </table>
+      <div class="callout warn"><b>Path spelling</b><code>UnSttledTradingDate</code> (missing the second "e" in "Settled") is exactly how the endpoint is spelled server-side — don't "fix" the typo in client code or it will 404.</div>
+    ` },
+
+    { h: "Parameters", body: `
+      <table class="param-table">
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        <tr><td>uid</td><td>string</td><td><span class="req-tag">Required</span></td><td>User ID of the logged-in user.</td></tr>
+      </table>
+    ` },
+
+    { h: "Request Examples", body: `${codeTabs("unsettled-trading-date-req", {
+      python: `import requests, json
+
+payload = {"uid": "AB1234"}
+data = f"jData={json.dumps(payload)}&jKey={accessToken}"
+
+response = requests.post(
+    "https://api.shoonya.com/NorenWClientAPI/GetUnSttledTradingDate",
+    data=data,
+)
+result = response.json()
+dates = [row["trd_date"] for row in result.get("trd_date", [])]
+print("Unsettled trading dates:", dates)`,
+
+      javascript: `const payload = { uid: "AB1234" };
+const data = \`jData=\${JSON.stringify(payload)}&jKey=\${accessToken}\`;
+
+const res = await fetch("https://api.shoonya.com/NorenWClientAPI/GetUnSttledTradingDate", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: data,
+});
+const result = await res.json();
+console.log("Unsettled trading dates:", (result.trd_date || []).map(r => r.trd_date));`,
+
+      curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/GetUnSttledTradingDate \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
+  --data-urlencode 'jData={"uid":"AB1234"}' \\
+  --data-urlencode "jKey=$ACCESS_TOKEN"`,
+    })}` },
+
+    { h: "Response", body: `
+      ${codeBlock("json", `// Success
+{
+  "stat": "OK",
+  "request_time": "10052021152900",
+  "trd_date": [
+    { "trd_date": "28-04-2021" },
+    { "trd_date": "29-04-2021" },
+    { "trd_date": "30-04-2021" }
+  ]
+}
+
+// Failure
+{
+  "stat": "Not_Ok",
+  "emsg": "Session Expired : Invalid Session Key"
+}`)}
+      <table class="param-table">
+        <tr><th>Field</th><th>Description</th></tr>
+        <tr><td>stat</td><td><code>OK</code> or <code>Not_Ok</code>.</td></tr>
+        <tr><td>request_time</td><td>Present only on success.</td></tr>
+        <tr><td>trd_date</td><td>Array of <code>{ trd_date }</code> objects listing unsettled trading dates.</td></tr>
+        <tr><td>emsg</td><td>Present only on failure.</td></tr>
+      </table>
+    ` },
+
+    { h: "Best Practices", body: `<ul>
+      <li>Parse <code>trd_date</code> strings as <code>DD-MM-YYYY</code>, not <code>MM-DD-YYYY</code> — a naive date parser in a US-locale environment will silently misread the month and day for any date past the 12th.</li>
+      <li>Refresh this list once per session rather than hardcoding a settlement calendar — exchange holidays and settlement cycles shift.</li>
+      <li>Use it to gate any settlement-dependent logic (e.g. deciding when a delivery-based position becomes eligible for further action) rather than computing T+1/T+2 manually from the current date.</li>
+    </ul>` },
+  ],
+},
+
+ // ---------------------------------------------------------------
+// ALERTS SECTION
+// ---------------------------------------------------------------
+ 
+"set-alert": {
+  badge: { method: "POST", path: "/NorenWClientAPI/SetAlert" },
+ 
+  desc: "Create a price/condition-based alert on a symbol. A plain notification-only condition — GTT orders use the dedicated Place GTT Order endpoint instead.",
+ 
+  sections: [
+ 
+    { h: "API Endpoint", body: `
+      <table class="param-table">
+        <tr><td><b>Method</b></td><td><code>POST</code></td></tr>
+        <tr><td><b>URL</b></td><td><code>https://api.shoonya.com/NorenWClientAPI/SetAlert</code></td></tr>
+        <tr><td><b>Content-Type</b></td><td><code>application/x-www-form-urlencoded</code></td></tr>
+        <tr><td><b>Payload</b></td><td><code>jData=&lt;JSON payload&gt;&amp;jKey=&lt;AccessToken&gt;</code> — requires a valid <code>AccessToken</code> from <a href="#" data-nav="login-flow-overview">Login</a>.</td></tr>
+      </table>
+    ` },
+ 
+    { h: "Overview", body: `
+      <p>Set Alert registers a condition evaluated against the live LTP feed. Use <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a> to see which <code>ai_t</code> values your account supports before setting one. For an order that should fire automatically on trigger, use <a href="#" data-nav="place-gtt-order">Place GTT Order</a> instead — that's a separate endpoint, not this one with a different <code>validity</code>.</p>
+    ` },
+ 
+    { h: "Parameters", body: `
+      <table class="param-table">
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th><th>Allowed Values</th></tr>
+        <tr><td>uid</td><td>string</td><td><span class="req-tag">Required</span></td><td>User ID of the logged-in user.</td><td>Account-specific</td></tr>
+        <tr><td>tsym</td><td>string</td><td><span class="req-tag">Required</span></td><td>Trading symbol the alert is set on.</td><td>Must exist in <a href="#" data-nav="symbol-master">Symbol Master</a></td></tr>
+        <tr><td>exch</td><td>string</td><td><span class="req-tag">Required</span></td><td>Exchange segment.</td><td>See <a href="#" data-nav="exchange-segment-codes">Exchange Segment Codes</a></td></tr>
+        <tr><td>ai_t</td><td>string</td><td><span class="req-tag">Required</span></td><td>Alert type — what the condition is evaluated against.</td><td>See <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a></td></tr>
+        <tr><td>validity</td><td>string</td><td><span class="req-tag">Required</span></td><td>Alert validity.</td><td><code>DAY</code>, <code>GTT</code></td></tr>
+        <tr><td>d</td><td>string</td><td><span class="opt-tag">Optional</span></td><td>Value to compare against LTP to decide when the alert fires.</td><td>Numeric string</td></tr>
+        <tr><td>remarks</td><td>string</td><td><span class="req-tag">Required</span></td><td>Free-text message stored with the alert for identification.</td><td>Free text</td></tr>
+      </table>
+    ` },
+ 
+    { h: "Request Examples", body: `${codeTabs("set-alert-req", {
+      python: `import requests
+import json
+ 
+payload = {
+    "uid": "AB1234",
+    "tsym": "RELIANCE-EQ",
+    "exch": "NSE",
+    "ai_t": "LTP",
+    "validity": "DAY",
+    "d": "2500",
+    "remarks": "breakout-watch",
+}
+data = f"jData={json.dumps(payload)}&jKey={accessToken}"
+ 
+response = requests.post(
+    "https://api.shoonya.com/NorenWClientAPI/SetAlert",
+    data=data,
+)
+result = response.json()
+ 
+if result.get("al_id"):
+    print("Alert created:", result["al_id"])
+else:
+    print("Alert rejected:", result.get("emsg"))`,
+ 
+      javascript: `const payload = {
+  uid: "AB1234",
+  tsym: "RELIANCE-EQ",
+  exch: "NSE",
+  ai_t: "LTP",
+  validity: "DAY",
+  d: "2500",
+  remarks: "breakout-watch",
+};
+ 
+const data = \`jData=\${JSON.stringify(payload)}&jKey=\${accessToken}\`;
+ 
+const res = await fetch("https://api.shoonya.com/NorenWClientAPI/SetAlert", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: data,
+});
+const result = await res.json();
+console.log(result.al_id ? \`Alert created: \${result.al_id}\` : \`Rejected: \${result.emsg}\`);`,
+ 
+      curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/SetAlert \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
+  --data-urlencode 'jData={"uid":"AB1234","tsym":"RELIANCE-EQ","exch":"NSE","ai_t":"LTP","validity":"DAY","d":"2500","remarks":"breakout-watch"}' \\
+  --data-urlencode "jKey=$ACCESS_TOKEN"`,
+    })}` },
+ 
+    { h: "Response", body: `
+      ${codeBlock("json", `// Success
+{
+  "request_time": "11:22:26 08-04-2021",
+  "stat": "OI created",
+  "al_id": "210408000000004"
+}
+ 
+// Failure
+{
+  "stat": "Not_Ok",
+  "emsg": "Session Expired : Invalid Session Key"
+}`)}
+      <table class="param-table">
+        <tr><th>Field</th><th>Description</th></tr>
+        <tr><td>stat</td><td>Success/failure indication. On success this is a status message rather than a plain <code>Ok</code> flag — check for <code>al_id</code> being present as the reliable success signal.</td></tr>
+        <tr><td>request_time</td><td>Present only on success.</td></tr>
+        <tr><td>al_id</td><td>Alert ID, needed for <a href="#" data-nav="cancel-alert">Cancel Alert</a> / <a href="#" data-nav="modify-alert">Modify Alert</a>.</td></tr>
+        <tr><td>emsg</td><td>Present only on failure — e.g. Invalid Input, Session Expired.</td></tr>
+      </table>
+    ` },
+ 
+    { h: "Best Practices", body: `<ul>
+      <li>Store the returned <code>al_id</code> immediately — there's no idempotency key on this call, so a network timeout leaves you unable to tell whether the alert was created without listing your alerts and matching on <code>tsym</code> + <code>remarks</code>.</li>
+      <li>Validate <code>ai_t</code> against <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a> before calling this, rather than discovering an unsupported type from <code>emsg</code>.</li>
+      <li>Use a distinct, greppable <code>remarks</code> value per alert so you can reconcile alerts against your own system after the fact, the same way <a href="#" data-nav="place-order">Place Order</a> recommends for orders.</li>
+    </ul>` },
+  ],
+},
+ 
+// ---------------------------------------------------------------
+ 
+"cancel-alert": {
+  badge: { method: "POST", path: "/NorenWClientAPI/CancelAlert" },
+ 
+  desc: "Cancel a previously set alert by its Alert ID.",
+ 
+  sections: [
+ 
+    { h: "API Endpoint", body: `
+      <table class="param-table">
+        <tr><td><b>Method</b></td><td><code>POST</code></td></tr>
+        <tr><td><b>URL</b></td><td><code>https://api.shoonya.com/NorenWClientAPI/CancelAlert</code></td></tr>
+        <tr><td><b>Content-Type</b></td><td><code>application/x-www-form-urlencoded</code></td></tr>
+        <tr><td><b>Payload</b></td><td><code>jData=&lt;JSON payload&gt;&amp;jKey=&lt;AccessToken&gt;</code></td></tr>
+      </table>
+    ` },
+ 
+    { h: "Parameters", body: `
+      <table class="param-table">
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        <tr><td>uid</td><td>string</td><td><span class="req-tag">Required</span></td><td>User ID of the logged-in user.</td></tr>
+        <tr><td>al_id</td><td>string</td><td><span class="req-tag">Required</span></td><td>Alert ID returned by <a href="#" data-nav="set-alert">Set Alert</a>.</td></tr>
+      </table>
+      <div class="callout warn"><b>Field name in source docs</b>Vendor documentation lists this field as <code>ai_t</code> under Cancel Alert, but that conflicts with <code>ai_t</code> meaning "alert type" everywhere else. This is almost certainly a documentation typo for <code>al_id</code> — verify against a live call before shipping.</div>
+    ` },
+ 
+    { h: "Request Examples", body: `${codeTabs("cancel-alert-req", {
+      python: `import requests, json
+ 
+payload = {"uid": "AB1234", "al_id": "210408000000004"}
+data = f"jData={json.dumps(payload)}&jKey={accessToken}"
+ 
+response = requests.post(
+    "https://api.shoonya.com/NorenWClientAPI/CancelAlert",
+    data=data,
+)
+print(response.json())`,
+ 
+      javascript: `const payload = { uid: "AB1234", al_id: "210408000000004" };
+const data = \`jData=\${JSON.stringify(payload)}&jKey=\${accessToken}\`;
+ 
+const res = await fetch("https://api.shoonya.com/NorenWClientAPI/CancelAlert", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: data,
+});
+console.log(await res.json());`,
+ 
+      curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/CancelAlert \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
+  --data-urlencode 'jData={"uid":"AB1234","al_id":"210408000000004"}' \\
+  --data-urlencode "jKey=$ACCESS_TOKEN"`,
+    })}` },
+ 
+    { h: "Response", body: `
+      ${codeBlock("json", `// Success
+{
+  "request_time": "15:03:33 08-04-2021",
+  "stat": "O! delete success",
+  "al_id": "210408000000008"
+}
+ 
+// Failure
+{
+  "stat": "Not_Ok",
+  "emsg": "Session Expired : Invalid Session Key"
+}`)}
+      <table class="param-table">
+        <tr><th>Field</th><th>Description</th></tr>
+        <tr><td>stat</td><td>Success/failure indication (a status string on success, not a plain <code>Ok</code> flag).</td></tr>
+        <tr><td>al_id</td><td>The cancelled Alert ID, echoed back on success.</td></tr>
+        <tr><td>emsg</td><td>Present only on failure.</td></tr>
+      </table>
+    ` },
+ 
+    { h: "Best Practices", body: `<ul>
+      <li>Verify the <code>al_id</code>/<code>ai_t</code> field-name discrepancy above against a live sandbox call before shipping — send whichever field name actually works and note it in your own code comments, since the vendor docs disagree with themselves on this endpoint.</li>
+      <li>Confirm an alert is still pending (via a list/pending endpoint) before cancelling if it's been a while since you set it — cancelling an alert that already fired will fail.</li>
+    </ul>` },
+  ],
+},
+ 
+// ---------------------------------------------------------------
+ 
+"modify-alert": {
+  badge: { method: "POST", path: "/NorenWClientAPI/ModifyAlert" },
+ 
+  desc: "Update the trigger value, validity, or remarks on an existing alert. The alert type itself cannot be changed.",
+ 
+  sections: [
+ 
+    { h: "API Endpoint", body: `
+      <table class="param-table">
+        <tr><td><b>Method</b></td><td><code>POST</code></td></tr>
+        <tr><td><b>URL</b></td><td><code>https://api.shoonya.com/NorenWClientAPI/ModifyAlert</code></td></tr>
+        <tr><td><b>Content-Type</b></td><td><code>application/x-www-form-urlencoded</code></td></tr>
+        <tr><td><b>Payload</b></td><td><code>jData=&lt;JSON payload&gt;&amp;jKey=&lt;AccessToken&gt;</code></td></tr>
+      </table>
+    ` },
+ 
+    { h: "Parameters", body: `
+      <table class="param-table">
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th><th>Allowed Values</th></tr>
+        <tr><td>uid</td><td>string</td><td><span class="req-tag">Required</span></td><td>User ID of the logged-in user.</td><td>Account-specific</td></tr>
+        <tr><td>al_id</td><td>string</td><td><span class="req-tag">Required</span></td><td>Alert ID of the alert to modify.</td><td>From <a href="#" data-nav="set-alert">Set Alert</a></td></tr>
+        <tr><td>tsym</td><td>string</td><td><span class="req-tag">Required</span></td><td>Trading symbol.</td><td>Must exist in <a href="#" data-nav="symbol-master">Symbol Master</a></td></tr>
+        <tr><td>exch</td><td>string</td><td><span class="req-tag">Required</span></td><td>Exchange segment.</td><td>See <a href="#" data-nav="exchange-segment-codes">Exchange Segment Codes</a></td></tr>
+        <tr><td>ai_t</td><td>string</td><td><span class="req-tag">Required</span></td><td>Original alert type. Immutable — must match the value the alert was created with.</td><td>Cannot be changed</td></tr>
+        <tr><td>validity</td><td>string</td><td><span class="req-tag">Required</span></td><td>Validity of the alert.</td><td><code>DAY</code>, <code>GTT</code></td></tr>
+        <tr><td>d</td><td>string</td><td><span class="opt-tag">Optional</span></td><td>New value to compare against LTP.</td><td>Numeric string</td></tr>
+        <tr><td>remarks</td><td>string</td><td><span class="req-tag">Required</span></td><td>Free-text message.</td><td>Free text</td></tr>
+      </table>
+      <div class="callout warn"><b>Alert type is fixed</b><code>ai_t</code> must be resent unchanged with every modify call — there is no way to convert an <code>LTP</code> alert into an <code>ATP</code> alert in place. Cancel and re-create instead.</div>
+    ` },
+ 
+    { h: "Request Examples", body: `${codeTabs("modify-alert-req", {
+      python: `import requests, json
+ 
+payload = {
+    "uid": "AB1234",
+    "al_id": "210408000000004",
+    "tsym": "RELIANCE-EQ",
+    "exch": "NSE",
+    "ai_t": "LTP",       # must match the original alert's type
+    "validity": "DAY",
+    "d": "2550",
+    "remarks": "breakout-watch-revised",
+}
+data = f"jData={json.dumps(payload)}&jKey={accessToken}"
+ 
+response = requests.post(
+    "https://api.shoonya.com/NorenWClientAPI/ModifyAlert",
+    data=data,
+)
+print(response.json())`,
+ 
+      javascript: `const payload = {
+  uid: "AB1234",
+  al_id: "210408000000004",
+  tsym: "RELIANCE-EQ",
+  exch: "NSE",
+  ai_t: "LTP",
+  validity: "DAY",
+  d: "2550",
+  remarks: "breakout-watch-revised",
+};
+const data = \`jData=\${JSON.stringify(payload)}&jKey=\${accessToken}\`;
+ 
+const res = await fetch("https://api.shoonya.com/NorenWClientAPI/ModifyAlert", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: data,
+});
+console.log(await res.json());`,
+ 
+      curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/ModifyAlert \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
+  --data-urlencode 'jData={"uid":"AB1234","al_id":"210408000000004","tsym":"RELIANCE-EQ","exch":"NSE","ai_t":"LTP","validity":"DAY","d":"2550","remarks":"breakout-watch-revised"}' \\
+  --data-urlencode "jKey=$ACCESS_TOKEN"`,
+    })}` },
+ 
+    { h: "Response", body: `
+      ${codeBlock("json", `// Success
+{
+  "request_time": "16:36:42 08-04-2021",
+  "stat": "Oi Replaced",
+  "al_id": "210408000000013"
+}
+ 
+// Failure
+{
+  "stat": "Not_Ok",
+  "emsg": "Session Expired : Invalid Session Key"
+}`)}
+      <table class="param-table">
+        <tr><th>Field</th><th>Description</th></tr>
+        <tr><td>stat</td><td>Success/failure indication (status string on success).</td></tr>
+        <tr><td>al_id</td><td>The modified Alert ID, echoed back on success.</td></tr>
+        <tr><td>emsg</td><td>Present only on failure.</td></tr>
+      </table>
+    ` },
+ 
+    { h: "Best Practices", body: `<ul>
+      <li>Always resend the full set of required fields (<code>tsym</code>, <code>exch</code>, <code>ai_t</code>, <code>validity</code>, <code>remarks</code>), not just the field you're changing — this looks like a full replace of the alert, not a partial patch.</li>
+      <li>Fetch the alert's current values before modifying if you don't have them cached locally, so you don't accidentally overwrite <code>remarks</code> or <code>validity</code> with stale data.</li>
+      <li>To change the alert type itself, cancel and re-create via <a href="#" data-nav="set-alert">Set Alert</a> instead of trying to force it through here.</li>
+    </ul>` },
+  ],
+},
+  
+
+ 
+ 
+
+ 
+
+ 
+
+ 
+
+
+  
+
+
+
+  
 
  
   // ---------- D. MARKET DATA APIs ----------
@@ -3317,7 +4147,7 @@ ret = api.start_websocket(
   sections: [
 
     { h: "Overview", body: `<p>The <a href="https://github.com/Shoonya-API-OAuth-Python/Shoonya_API_OAuth" target="_blank" rel="noopener">Shoonya_API_OAuth</a> repo ships two runnable CLI scripts — <code>example_orders.py</code> and <code>example_market.py</code> — that exercise every major call through a simple <code>input()</code>-driven menu loop. They're the fastest way to confirm your credentials and see real request/response shapes before wiring anything into a strategy. Both scripts import the same wrapper class, <code>ShoonyaApiPy</code>, from <code>api_helper.py</code>.</p>
-    <div class="callout"><b>This is the actual SDK surface</b>Earlier pages on this site show a simplified/illustrative <code>ShoonyaClient</code> for readability. The real class is <code>ShoonyaApiPy</code> (also aliased <code>NorenApiPy</code> in some forks), and its method names — <code>place_order</code>, <code>get_quotes</code>, <code>searchscrip</code>, <code>start_websocket</code> — are what you'll actually import and call.</p></div>` },
+    <div class="callout"><b>This is the actual SDK surface</b>Earlier pages on this site show a simplified/illustrative <code>ShoonyaClient</code> for readability. The real class is <code>ShoonyaApiPy</code> (also aliased <code>NorenApiPy</code> in some forks), and its method names — <code>place_order</code>, <code>get_quotes</code>, <code>searchscrip</code>, <code>start_websocket</code> — are what you'll actually import and call.</div>` },
 
     { h: "Shared setup: OAuth login", body: `<p>Unlike the password/TOTP-based fork, this repo authenticates via the OAuth flow documented on <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> — redirect to the authorize URL, capture the <code>code</code>, then exchange it for a token:</p>
     ${codeBlock("python", `from api_helper import NorenApiPy
@@ -3980,28 +4810,27 @@ nApi.SendPlaceOrder(Handlers.OnResponseNOP, order);`,
   // ---------- G. ANNEXURE ----------
   "error-code-reference": {
     badge: null,
-    desc: "Every error code returned across the Shoonya API, what it means, and how to resolve it.",
+    desc: "Common HTTP error codes returned by the Shoonya API — what each means and how to resolve it.",
     sections: [
-      { h: "Overview", body: `<p>All REST endpoints return <code>stat: "Not_Ok"</code> on failure along with an <code>emsg</code> string. This page maps the common <code>emsg</code> patterns to their cause and fix.</p>` },
-      { h: "Purpose", body: `<p>Use this as the single lookup table for error handling logic across every integration — link to a specific row instead of duplicating error explanations on each endpoint page.</p>` },
+      { h: "Overview", body: `<p>The table below lists the common HTTP status codes you may receive while calling the Shoonya API, along with the recommended resolution for each.</p>` },
+      { h: "Purpose", body: `<p>Use this as the single lookup table for HTTP-level error handling (retries, re-auth, escalation) across every integration — link to a specific row instead of duplicating error explanations on each endpoint page.</p>` },
       { h: "Reference table", body: `
       <table class="param-table">
-        <tr><th>Code</th><th>Category</th><th>Meaning</th><th>Resolution</th></tr>
-        <tr><td>Session_Expired</td><td>Auth</td><td>Token invalid or timed out.</td><td>Re-authenticate.</td></tr>
-        <tr><td>Invalid_Input</td><td>Validation</td><td>A required field is missing or malformed.</td><td>Check parameter table on the specific endpoint.</td></tr>
-        <tr><td>Not_Ok</td><td>Business rule</td><td>Request reached the server but was rejected.</td><td>Read <code>emsg</code> for the exact reason (margin, RMS, circuit).</td></tr>
-        <tr><td>Rate_Limited</td><td>Throttling</td><td>Too many requests in the current window.</td><td>Back off per Rate Limits and retry with jitter.</td></tr>
-        <tr><td>Server_Error</td><td>Infra</td><td>Unexpected upstream failure.</td><td>Retry with exponential backoff; escalate if persistent.</td></tr>
+        <tr><th>Code</th><th>Error Description</th><th>Resolution</th></tr>
+        <tr><td>400</td><td>Missing or bad request parameters or values.</td><td>Validate the payload against the endpoint's parameter table — check for missing required fields or incorrect types/values.</td></tr>
+        <tr><td>403</td><td>Session expired or invalidated. Must relogin.</td><td>Re-authenticate via the login/OAuth flow and obtain a fresh session token; do not retry the same request with the old token.</td></tr>
+        <tr><td>404</td><td>Requested resource was not found.</td><td>Confirm the endpoint path and any identifiers used (order ID, symbol, token, etc.) are correct.</td></tr>
+        <tr><td>405</td><td>Request method (GET, POST, etc.) is not allowed on the requested endpoint.</td><td>Check the endpoint's documented HTTP method and correct the client call.</td></tr>
+        <tr><td>410</td><td>The requested resource is gone permanently.</td><td>Stop calling this endpoint/resource; check the changelog for its replacement.</td></tr>
+        <tr><td>429</td><td>Too many requests to the API (rate limiting).</td><td>Back off per the Rate Limits page and retry with exponential backoff and jitter.</td></tr>
+        <tr><td>500</td><td>Something unexpected went wrong.</td><td>Retry with backoff; if persistent, capture the request/response and escalate to support.</td></tr>
+        <tr><td>502</td><td>The backend OMS is down and the API is unable to communicate with it.</td><td>Please check the host or WebSocket URL you're connecting to, and confirm you're going through the OAuth login flow correctly before retrying — a 502 here often traces back to a misconfigured host/socket endpoint or an invalid/incomplete auth handshake rather than a transient outage.</td></tr>
+        <tr><td>503</td><td>Service unavailable; the API is down.</td><td>Retry with backoff; check the status page before escalating.</td></tr>
+        <tr><td>504</td><td>Gateway timeout; the API is unreachable.</td><td>Retry with backoff. For order placement/modification calls, reconcile via a status GET before retrying, to avoid duplicate orders.</td></tr>
       </table>` },
-      { h: "Error handling", body: `<div class="callout"><b>Convention</b>Always branch on <code>stat</code> first, then use <code>emsg</code> for logging/telemetry — never string-match on <code>emsg</code> for control flow, as exact wording can change.</div>` },
-      { h: "Best practices", body: `<ul><li>Log the full raw response for every non-Ok result — don't discard <code>emsg</code>.</li><li>Build one central error-mapping function shared across all endpoint calls instead of duplicating this table per call site.</li></ul>` },
-      { h: "Python example", body: `${codeBlock("python", `resp = client.place_order(...)
-if resp.stat != "Ok":
-    logger.warning("Order rejected: %s", resp.emsg)
-    raise OrderRejectedError(resp.emsg)`)}` },
-      { h: "Notes", body: `<p>This table is illustrative — replace with the verified, complete code list from the live API before publishing.</p>` },
     ],
   },
+
 
   "exchange-segment-codes": {
   badge: null,
@@ -4264,6 +5093,3 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
-
-
-
