@@ -21,7 +21,7 @@ const NAV = [
       { slug: "totp-setup-guide", title: "TOTP Setup Guide"},
       // { slug: "auto-login-totp", title: "Auto Login (TOTP)", badge: "Coming Soon" },
       { slug: "ip-whitelisting", title: "IP Whitelisting Guide", badge: null },
-      { slug: "manual-login-oauth", title: "Manual-Login-Oauth", badge: null },
+      { slug: "manual-login-oauth", title: "Manual Login (OAuth)", badge: null },
       { slug: "python-login-selenium", title: "Python Login (Selenium)", badge: null },
       { slug: "token-renewal", title: "Token Renewal", badge: null },
       { slug: "validate-hs-token", title: "Validate HS Token", badge: "POST" },
@@ -55,17 +55,38 @@ const NAV = [
       { slug: "funds-limits", title: "Funds & Limits", badge: "POST" },
     ],
   },
+
+  {
+    id: "gtt-orders",
+    label: "GTT Orders",
+    items: [
+      { slug: "place-gtt-order", title: "Place GTT Order", badge: "POST" },
+      { slug: "cancel-gtt-order", title: "Cancel GTT Order", badge: "POST" },
+      { slug: "pending-gtt-orders", title: "Get Pending GTT Orders", badge: "POST" },
+      { slug: "enabled-gtt-orders", title: "Get Enabled GTT Orders", badge: "POST" },
+      { slug: "unsettled-trading-date", title: "Get Unsettled Trading Date", badge: "POST" },
+    ],
+  },
+  {
+    id: "alerts",
+    label: "Alerts",
+    items: [
+      { slug: "set-alert", title: "Set Alert", badge: "POST" },
+      { slug: "cancel-alert", title: "Cancel Alert", badge: "POST" },
+      { slug: "modify-alert", title: "Modify Alert", badge: "POST" },
+    ],
+  },
   {
     id: "market-data-apis",
     label: "Market Data APIs",
     items: [
       { slug: "market-quotes", title: "Market Quotes (LTP / OHLC)", badge: "POST" },
-      { slug: "historical-data", title: "Historical-Data", badge: "POST" },
-      { slug: "time-price-series", title: "Time-Price-Series", badge: "POST" },
+      { slug: "historical-data", title: "Historical Data", badge: "POST" },
+      { slug: "time-price-series", title: "Time/Price Series", badge: "POST" },
       { slug: "option-chain", title: "Option Chain", badge: "POST" },
       { slug: "search-scrip", title: "Search Scrip", badge: "POST" },
-      { slug: "security-info", title: "Security-Info", badge: "POST" },
-      { slug: "Get-Quotes", title: "Get -Quotes", badge: "POST" },
+      { slug: "security-info", title: "Security Info", badge: "POST" },
+      { slug: "Get-Quotes", title: "Get Quotes", badge: "POST" },
     ],
   },
   {
@@ -84,7 +105,7 @@ const NAV = [
     label: "SDK Reference",
     items: [
       { slug: "python-sdk", title: "Python SDK" },
-      { slug: "dotnet-sdk", title: "Dotnet-SDK",},
+      { slug: "dotnet-sdk", title: ".NET SDK" },
       { slug: "sdk-code-examples", title: "Code Examples" },
       { slug: "postman-collection", title: "Postman Collection" },
     ],
