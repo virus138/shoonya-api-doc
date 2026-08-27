@@ -644,10 +644,16 @@
 
   // Clear if the field loses focus without the button being pressed
   // (user typed it in, then changed their mind / clicked away).
+  // NOTE: this previously only checked for the empty-value case and
+  // returned without ever calling clearSecretField() when the field
+  // actually had a value — the secret was left sitting in the DOM
+  // after blur. Fixed to actually clear it.
   document.addEventListener(
     "blur",
     function (e) {
-      if (e.target && e.target.id === "cc-secret" && !e.target.value) return;
+      if (e.target && e.target.id === "cc-secret" && e.target.value) {
+        clearSecretField();
+      }
     },
     true
   );
