@@ -2483,7 +2483,7 @@ for p in positions:
 "place-gtt-order": {
   badge: { method: "POST", path: "/NorenWClientAPI/PlaceGTTOrder" },
 
-  desc: "Register a Good-Till-Triggered order: an order that stays dormant until the specified LTP condition is met, at which point it's submitted to the exchange with the given order parameters.",
+  desc: "Register a Good-Till-Triggered order: an order that stays dormant until the specified alert condition is met, at which point it's submitted to the exchange with the given order parameters. The GTT stays active until its validity_date.",
 
   sections: [
 
@@ -2497,7 +2497,8 @@ for p in positions:
     ` },
 
     { h: "Overview", body: `
-      <p>Place GTT Order is a superset of <a href="#" data-nav="set-alert">Set Alert</a>: it carries the same trigger-condition fields (<code>ai_t</code>, <code>d</code>, <code>validity</code>) plus the full order payload (<code>trantype</code>, <code>prctyp</code>, <code>prd</code>, <code>qty</code>, <code>prc</code>, etc.) that gets submitted once the condition fires. Unlike <a href="#" data-nav="place-order">Place Order</a>, <code>prctyp</code> here also allows <code>MKT</code>, <code>DS</code>, <code>2L</code>, and <code>3L</code>.</p>
+      <p>Place GTT Order is a superset of <a href="#" data-nav="set-alert">Set Alert</a>: it carries the same trigger-condition fields (<code>ai_t</code>, <code>d</code>, <code>validity</code>) plus an expiry (<code>validity_date</code>) and the full order payload (<code>trantype</code>, <code>prctyp</code>, <code>prd</code>, <code>qty</code>, <code>prc</code>, etc.) that gets submitted once the condition fires. Unlike <a href="#" data-nav="place-order">Place Order</a>, <code>prctyp</code> here also allows <code>MKT</code>, <code>DS</code>, <code>2L</code>, and <code>3L</code>.</p>
+      <p>Set <code>validity</code> to <code>GTT</code> and pass <code>validity_date</code> in <code>DD-MM-YYYY</code> format. If the condition is not met by that date, the GTT order expires without being sent to the exchange.</p>
     ` },
 
     { h: "Parameters", body: `
@@ -2507,17 +2508,18 @@ for p in positions:
         <tr><td>actid</td><td>string</td><td><span class="req-tag">Required</span></td><td>Login user's account ID.</td><td>Account-specific</td></tr>
         <tr><td>tsym</td><td>string</td><td><span class="req-tag">Required</span></td><td>Trading symbol.</td><td>Must exist in <a href="#" data-nav="symbol-master">Symbol Master</a></td></tr>
         <tr><td>exch</td><td>string</td><td><span class="req-tag">Required</span></td><td>Exchange segment.</td><td>See <a href="#" data-nav="exchange-segment-codes">Exchange Segment Codes</a></td></tr>
-        <tr><td>ai_t</td><td>string</td><td><span class="req-tag">Required</span></td><td>Alert type the trigger condition is evaluated against.</td><td>See <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a></td></tr>
-        <tr><td>validity</td><td>string</td><td><span class="req-tag">Required</span></td><td>Validity of the trigger.</td><td><code>DAY</code>, <code>GTT</code></td></tr>
-        <tr><td>d</td><td>string</td><td><span class="opt-tag">Optional</span></td><td>Value compared against LTP to decide when the order fires.</td><td>Numeric string</td></tr>
-        <tr><td>remarks</td><td>string</td><td><span class="req-tag">Required</span></td><td>Free-text message for identification.</td><td>Free text</td></tr>
+        <tr><td>ai_t</td><td>string</td><td><span class="req-tag">Required</span></td><td>Alert type the trigger condition is evaluated against (e.g. <code>CH_PER_B_O</code>).</td><td>See <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a></td></tr>
+        <tr><td>d</td><td>string</td><td><span class="req-tag">Required</span></td><td>Value the alert condition is evaluated against; its meaning depends on <code>ai_t</code>.</td><td>Numeric string</td></tr>
+        <tr><td>validity</td><td>string</td><td><span class="req-tag">Required</span></td><td>Validity of the trigger. Use <code>GTT</code> for a good-till-triggered order.</td><td><code>DAY</code>, <code>GTT</code></td></tr>
+        <tr><td>validity_date</td><td>string</td><td><span class="req-tag">Required</span></td><td>Expiry date of the GTT order. Must be sent when <code>validity</code> is <code>GTT</code>.</td><td><code>DD-MM-YYYY</code> (e.g. <code>11-10-2026</code>), a future date</td></tr>
         <tr><td>trantype</td><td>string</td><td><span class="req-tag">Required</span></td><td>Transaction type.</td><td><code>B</code> (Buy), <code>S</code> (Sell)</td></tr>
         <tr><td>prctyp</td><td>string</td><td><span class="req-tag">Required</span></td><td>Order type submitted on trigger.</td><td><code>LMT</code>, <code>MKT</code>, <code>SL-LMT</code>, <code>SL-MKT</code>, <code>DS</code>, <code>2L</code>, <code>3L</code></td></tr>
         <tr><td>prd</td><td>string</td><td><span class="req-tag">Required</span></td><td>Product type.</td><td><code>C</code>, <code>M</code>, <code>H</code></td></tr>
         <tr><td>ret</td><td>string</td><td><span class="req-tag">Required</span></td><td>Retention type of the resulting order (options depend on exchange).</td><td><code>DAY</code>, <code>EOS</code>, <code>IOC</code></td></tr>
         <tr><td>qty</td><td>integer</td><td><span class="req-tag">Required</span></td><td>Order quantity.</td><td>&gt; 0, lot-size multiple for derivatives</td></tr>
         <tr><td>prc</td><td>number</td><td><span class="req-tag">Required</span></td><td>Order price submitted on trigger.</td><td>&gt; 0</td></tr>
-        <tr><td>dscqty</td><td>integer</td><td><span class="opt-tag">Optional</span></td><td>Disclosed quantity.</td><td>Max 10% (NSE), 50% (MCX)</td></tr>
+        <tr><td>dscqty</td><td>integer</td><td><span class="opt-tag">Optional</span></td><td>Disclosed quantity. Send <code>0</code> for no disclosed quantity.</td><td>Max 10% (NSE), 50% (MCX)</td></tr>
+        <tr><td>remarks</td><td>string</td><td><span class="opt-tag">Optional</span></td><td>Free-text message for identification.</td><td>Free text</td></tr>
       </table>
     ` },
 
@@ -2527,18 +2529,19 @@ for p in positions:
 payload = {
     "uid": "AB1234",
     "actid": "AB1234",
-    "tsym": "RELIANCE-EQ",
+    "tsym": "ACC-EQ",
     "exch": "NSE",
-    "ai_t": "LTP",
+    "ai_t": "CH_PER_B_O",
+    "d": "206022",
     "validity": "GTT",
-    "d": "2500",
-    "remarks": "gtt-breakout-buy",
+    "validity_date": "11-10-2026",   # DD-MM-YYYY
     "trantype": "B",
     "prctyp": "LMT",
     "prd": "C",
     "ret": "DAY",
     "qty": "1",
-    "prc": "2505.0",
+    "prc": "1412.80",
+    "dscqty": "0",
 }
 data = f"jData={json.dumps(payload)}&jKey={accessToken}"
 
@@ -2556,18 +2559,19 @@ else:
       javascript: `const payload = {
   uid: "AB1234",
   actid: "AB1234",
-  tsym: "RELIANCE-EQ",
+  tsym: "ACC-EQ",
   exch: "NSE",
-  ai_t: "LTP",
+  ai_t: "CH_PER_B_O",
+  d: "206022",
   validity: "GTT",
-  d: "2500",
-  remarks: "gtt-breakout-buy",
+  validity_date: "11-10-2026", // DD-MM-YYYY
   trantype: "B",
   prctyp: "LMT",
   prd: "C",
   ret: "DAY",
   qty: "1",
-  prc: "2505.0",
+  prc: "1412.80",
+  dscqty: "0",
 };
 const data = \`jData=\${JSON.stringify(payload)}&jKey=\${accessToken}\`;
 
@@ -2581,7 +2585,7 @@ console.log(result.al_id ? \`GTT order placed: \${result.al_id}\` : \`Rejected: 
 
       curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/PlaceGTTOrder \\
   -H "Content-Type: application/x-www-form-urlencoded" \\
-  --data-urlencode 'jData={"uid":"AB1234","actid":"AB1234","tsym":"RELIANCE-EQ","exch":"NSE","ai_t":"LTP","validity":"GTT","d":"2500","remarks":"gtt-breakout-buy","trantype":"B","prctyp":"LMT","prd":"C","ret":"DAY","qty":"1","prc":"2505.0"}' \\
+  --data-urlencode 'jData={"uid":"AB1234","actid":"AB1234","tsym":"ACC-EQ","exch":"NSE","ai_t":"CH_PER_B_O","d":"206022","validity":"GTT","validity_date":"11-10-2026","trantype":"B","prctyp":"LMT","prd":"C","ret":"DAY","qty":"1","prc":"1412.80","dscqty":"0"}' \\
   --data-urlencode "jKey=$ACCESS_TOKEN"`,
     })}` },
 
@@ -2609,14 +2613,14 @@ console.log(result.al_id ? \`GTT order placed: \${result.al_id}\` : \`Rejected: 
 
     { h: "Best Practices", body: `<ul>
       <li>Check for <code>al_id</code> in the response before trusting the order is registered — <code>stat</code> is a free-form status string here, not a plain <code>Ok</code>/<code>Not_Ok</code> flag.</li>
+      <li>Always send <code>validity_date</code> in <code>DD-MM-YYYY</code> format with <code>validity: "GTT"</code>, and make sure it is a future date — a missing or malformed date is a common cause of rejection.</li>
       <li>Confirm the <code>ai_t</code> value against <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a> before every placement — an unsupported alert type fails at request time, not silently.</li>
-      <li>Reconcile with <a href="#" data-nav="pending-gtt-orders">Get Pending GTT Order</a> after placing, the same way you'd reconcile a regular order against <a href="#" data-nav="order-book">Order Book</a> — a GTT order sits dormant for potentially a long time, so don't assume it's still there without checking.</li>
+      <li>Reconcile with <a href="#" data-nav="pending-gtt-orders">Get Pending GTT Order</a> after placing, the same way you'd reconcile a regular order against <a href="#" data-nav="order-book">Order Book</a> — a GTT order sits dormant until it triggers or reaches <code>validity_date</code>, so don't assume it's still there without checking.</li>
       <li>Because the resulting order fires whenever the market later crosses your trigger, re-validate <code>prc</code> against the live circuit band and lot size at trigger time in your own monitoring — a GTT order placed weeks earlier can go stale relative to corporate actions, splits, or circuit changes.</li>
       <li><code>MKT</code> is allowed here even though it's rejected on <a href="#" data-nav="place-order">Place Order</a> — decide deliberately whether you want price protection (<code>LMT</code>) or fill certainty (<code>MKT</code>) once triggered.</li>
     </ul>` },
   ],
 },
-
 // ---------------------------------------------------------------
 
 "cancel-gtt-order": {
