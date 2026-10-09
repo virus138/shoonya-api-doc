@@ -2616,8 +2616,6 @@ console.log(result.al_id ? \`GTT order placed: \${result.al_id}\` : \`Rejected: 
       <li>Always send <code>validity_date</code> in <code>DD-MM-YYYY</code> format with <code>validity: "GTT"</code>, and make sure it is a future date — a missing or malformed date is a common cause of rejection.</li>
       <li>Confirm the <code>ai_t</code> value against <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a> before every placement — an unsupported alert type fails at request time, not silently.</li>
       <li>Reconcile with <a href="#" data-nav="pending-gtt-orders">Get Pending GTT Order</a> after placing, the same way you'd reconcile a regular order against <a href="#" data-nav="order-book">Order Book</a> — a GTT order sits dormant until it triggers or reaches <code>validity_date</code>, so don't assume it's still there without checking.</li>
-      <li>Because the resulting order fires whenever the market later crosses your trigger, re-validate <code>prc</code> against the live circuit band and lot size at trigger time in your own monitoring — a GTT order placed weeks earlier can go stale relative to corporate actions, splits, or circuit changes.</li>
-      <li><code>MKT</code> is allowed here even though it's rejected on <a href="#" data-nav="place-order">Place Order</a> — decide deliberately whether you want price protection (<code>LMT</code>) or fill certainty (<code>MKT</code>) once triggered.</li>
     </ul>` },
   ],
 },
