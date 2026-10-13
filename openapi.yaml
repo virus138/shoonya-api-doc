@@ -1,0 +1,3526 @@
+openapi: 3.0.3
+info:
+  title: Shoonya NorenRESTAPI (OAuth)
+  version: 1.0.0
+  description: |
+    Unofficial OpenAPI 3.0 description of the Shoonya (Finvasia) **NorenRESTAPI** with OAuth, generated from the
+    `NorenRESTAPI_oAuth` Postman collection and the public documentation. The documentation at
+    https://shoonya.com/api-documentation is the source of truth.
+
+    ### Conventions
+    - Every endpoint is `POST`.
+    - The body carries a single field `jData` holding a **compact JSON string**. Send it as
+      `application/x-www-form-urlencoded` (what the Postman collection uses) or as `text/plain` with the body
+      `jData=<JSON>` (what the docs show). Do not let your HTTP library URL-encode the JSON a second time.
+    - Authentication: `Authorization: Bearer <access_token>`. The token is not repeated in the body.
+    - Responses are JSON. Always check `stat` (`Ok` / `Not_Ok`); on failure `emsg` explains why. Numeric values are
+      strings.
+    - Endpoints marked `x-needs-review` have only `uid` / `actid` documented in the Postman collection.
+
+    ### Getting a token
+    1. Send the user to `https://api.shoonya.com/OAuthlogin/authorize/oauth?client_id=<app_key>`.
+    2. Take the authorization code from the redirect URL.
+    3. Call `GenAcsTok` with `appkey = SHA256(client_id + secret_code + auth_code)`.
+  contact:
+    name: Shoonya API
+    url: https://shoonya.com/api-documentation
+externalDocs:
+  description: Official Shoonya API documentation
+  url: https://shoonya.com/api-documentation
+servers:
+- url: https://api.shoonya.com/NorenWClientAPI
+  description: Shoonya REST gateway
+security:
+- bearerAuth: []
+tags:
+- name: Auth & Account
+  description: OAuth token exchange, password reset, user and client details, logout.
+- name: Watchlist
+  description: Market watch lists and scrip search.
+- name: Orders & Trades
+  description: Place, modify and cancel orders; order book, trade book, margins, product conversion.
+- name: Positions, Holdings & Funds
+  description: Positions, holdings, limits and payout information.
+- name: Reports
+  description: Order and trade reports.
+- name: Market Data & Reference
+  description: Quotes, security info, chart data, option chain and greeks, exchange messages.
+paths:
+  /GenAcsTok:
+    post:
+      tags:
+      - Auth & Account
+      summary: GenAccessToken
+      operationId: genAccessToken
+      description: Exchange the OAuth authorization code for an access token. The `appkey` field is the
+        checksum `SHA256(client_id + secret_code + auth_code)`. The OAuth login page is `https://api.shoonya.com/OAuthlogin/authorize/oauth?client_id=<app_key>`.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `code` | yes | Authorization code from the redirect URL after login |
+                    | `appkey` | yes | Checksum: SHA256(client_id + secret_code + auth_code) |
+                    | `apikey` | yes | Vendor API key |
+                  example: '{"uid":"USER_ID","code":"<auth_code>","appkey":"<checksum>","apikey":"<vendor_api_key>"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","code":"<auth_code>","appkey":"<checksum>","apikey":"<vendor_api_key>"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/AccessTokenResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      security: []
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/manual-login-oauth
+  /ForgotPassword:
+    post:
+      tags:
+      - Auth & Account
+      summary: Forgot Password
+      operationId: forgotPassword
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+      security: []
+  /FgtPwdOTP:
+    post:
+      tags:
+      - Auth & Account
+      summary: Forgot Password OTP
+      operationId: forgotPasswordOtp
+      description: Request an OTP for password reset.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | User id |
+                    | `pan` | yes | PAN of the user, or SHA-256 (applied 3 times) of the password |
+                  example: '{"uid":"USER_ID","pan":"ABCDE1234F"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","pan":"ABCDE1234F"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/ForgotPwdOtpResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      security: []
+  /Changepwd:
+    post:
+      tags:
+      - Auth & Account
+      summary: Change Password
+      operationId: changePassword
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /UserDetails:
+    post:
+      tags:
+      - Auth & Account
+      summary: User Detail
+      operationId: userDetail
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /ClientDetails:
+    post:
+      tags:
+      - Auth & Account
+      summary: ClientDetails
+      operationId: clientDetails
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /MWList:
+    post:
+      tags:
+      - Watchlist
+      summary: Get Watchlist Names
+      operationId: getWatchlistNames
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /MarketWatch:
+    post:
+      tags:
+      - Watchlist
+      summary: Get Watchlist Scrips
+      operationId: getWatchlistScrips
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /SearchScrip:
+    post:
+      tags:
+      - Watchlist
+      summary: Search Scrip
+      operationId: searchScrip
+      description: Search scrips by (partial) text, e.g. `BANKNIFTY 30DEC CE`.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `stext` | yes | Search text |
+                    | `exch` | no | Exchange (see `exarr` in User Details) |
+                  example: '{"uid":"USER_ID","stext":"REL","exch":"NSE"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","stext":"REL","exch":"NSE"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/SearchScripResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/search-scrip
+  /AddMultiScripsToMW:
+    post:
+      tags:
+      - Watchlist
+      summary: Add Scrip To Watchlist
+      operationId: addScripToWatchlist
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /ReorderMWScrips:
+    post:
+      tags:
+      - Watchlist
+      summary: ReorderMWScrips
+      operationId: reorderMWScrips
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /DeleteMultiMWScrips:
+    post:
+      tags:
+      - Watchlist
+      summary: Delete Scrip to Watch List
+      operationId: deleteScripToWatchList
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /PreDefinedMW:
+    post:
+      tags:
+      - Watchlist
+      summary: PreDefinedMW
+      operationId: preDefinedMW
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /PreDefinedMWList:
+    post:
+      tags:
+      - Watchlist
+      summary: PreDefinedMWList
+      operationId: preDefinedMWList
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /RenameMW:
+    post:
+      tags:
+      - Watchlist
+      summary: RenameMW
+      operationId: renameMW
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /PlaceOrder:
+    post:
+      tags:
+      - Orders & Trades
+      summary: Place Order
+      operationId: placeOrder
+      description: Place an order with the OMS. Use URL-encoding for symbols containing special characters
+        (e.g. `M&M`).
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `actid` | yes | Account id of the logged-in user |
+                    | `exch` | yes | Exchange: NSE / NFO / BSE / MCX (see `exarr` in User Details) |
+                    | `tsym` | yes | Trading symbol of the contract |
+                    | `qty` | yes | Order quantity |
+                    | `prc` | yes | Order price |
+                    | `trgprc` | no | Trigger price, only for SL-LMT / SL-MKT |
+                    | `dscqty` | no | Disclosed quantity (max 10% NSE, 50% MCX) |
+                    | `prd` | yes | Product: C / M / H (see `prarr` in User Details) |
+                    | `trantype` | yes | B (buy) or S (sell) |
+                    | `prctyp` | yes | LMT / MKT / SL-LMT / SL-MKT / DS / 2L / 3L |
+                    | `ret` | yes | DAY / EOS / IOC |
+                    | `remarks` | no | Your tag for the order |
+                    | `ordersource` | no | Set to `API` |
+                    | `bpprc` | no | Book profit price (bracket orders) |
+                    | `blprc` | no | Book loss price (H and B products) |
+                    | `trailprc` | no | Trailing price (H and B products) |
+                    | `amo` | no | `Yes` for an after-market order; anything else is a regular order |
+                  example: '{"uid":"USER_ID","actid":"USER_ID","exch":"NSE","tsym":"CANBK-EQ","qty":"1","prc":"200.00","trgprc":"199.50","dscqty":"0","prd":"C","trantype":"B","prctyp":"SL-LMT","ret":"DAY","remarks":"my_order_001","ordersource":"API"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","actid":"USER_ID","exch":"NSE","tsym":"CANBK-EQ","qty":"1","prc":"200.00","trgprc":"199.50","dscqty":"0","prd":"C","trantype":"B","prctyp":"SL-LMT","ret":"DAY","remarks":"my_order_001","ordersource":"API"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/OrderPlacedResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/place-order
+  /ModifyOrder:
+    post:
+      tags:
+      - Orders & Trades
+      summary: Modify Order
+      operationId: modifyOrder
+      description: Modify quantity, price type, price or trigger price of an open order.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `norenordno` | yes | Noren order number to modify |
+                    | `exch` | yes | Exchange |
+                    | `tsym` | yes | Trading symbol; must match the original order |
+                    | `prctyp` | no | LMT / MKT / SL-MKT / SL-LMT |
+                    | `prc` | no | New price |
+                    | `qty` | no | New quantity |
+                    | `trgprc` | no | New trigger price (SL orders) |
+                    | `bpprc` | no | Book profit price |
+                    | `blprc` | no | Book loss price |
+                    | `trailprc` | no | Trailing price |
+                  example: '{"uid":"USER_ID","norenordno":"<order_number>","exch":"NSE","tsym":"CANBK-EQ","qty":"2","prctyp":"LMT","prc":"201.00"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","norenordno":"<order_number>","exch":"NSE","tsym":"CANBK-EQ","qty":"2","prctyp":"LMT","prc":"201.00"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/OrderResultResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/modify-order
+  /CancelOrder:
+    post:
+      tags:
+      - Orders & Trades
+      summary: Cancel Order
+      operationId: cancelOrder
+      description: Cancel an open order.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `norenordno` | yes | Noren order number to cancel |
+                  example: '{"uid":"USER_ID","norenordno":"<order_number>"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","norenordno":"<order_number>"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/OrderResultResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/cancel-order
+  /ExitSNOOrder:
+    post:
+      tags:
+      - Orders & Trades
+      summary: ExitSNOOrder
+      operationId: exitSnoOrder
+      description: Exit a cover or bracket order.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `norenordno` | yes | Noren order number |
+                    | `prd` | yes | H or B only (cover / bracket orders) |
+                  example: '{"uid":"USER_ID","norenordno":"<order_number>","prd":"H"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","norenordno":"<order_number>","prd":"H"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/ExitOrderResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/exit-order
+  /GetOrderMargin:
+    post:
+      tags:
+      - Orders & Trades
+      summary: GetOrderMargin
+      operationId: getOrderMargin
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /GetBasketMargin:
+    post:
+      tags:
+      - Orders & Trades
+      summary: GetBasketMargin
+      operationId: getBasketMargin
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /OrderBook:
+    post:
+      tags:
+      - Orders & Trades
+      summary: OrderBook
+      operationId: getOrderBook
+      description: List of orders placed for the account.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/OrderBookItem'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/order-book
+  /MultiLegOrderBook:
+    post:
+      tags:
+      - Orders & Trades
+      summary: MultiLegOrderBook
+      operationId: multiLegOrderBook
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /SingleOrdHist:
+    post:
+      tags:
+      - Orders & Trades
+      summary: Single order Hist
+      operationId: getSingleOrderHistory
+      description: Status history of a single order.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `norenordno` | yes | Noren order number |
+                  example: '{"uid":"USER_ID","norenordno":"<order_number>"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","norenordno":"<order_number>"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/OrderHistoryItem'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/order-history
+  /SingleOrdStatus:
+    post:
+      tags:
+      - Orders & Trades
+      summary: single ord status
+      operationId: singleOrdStatus
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                    | `norenordno` | no | See documentation |
+                  example: '{"uid":"USER_ID","norenordno":"<order_number>"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","norenordno":"<order_number>"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /TradeBook:
+    post:
+      tags:
+      - Orders & Trades
+      summary: TradeBook
+      operationId: getTradeBook
+      description: List of trades for the account.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `actid` | yes | Account id of the logged-in user |
+                  example: '{"uid":"USER_ID","actid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","actid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/TradeBookItem'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/trade-book
+  /ProductConversion:
+    post:
+      tags:
+      - Orders & Trades
+      summary: Product Conversion
+      operationId: productConversion
+      description: Convert the product type of a position.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `actid` | yes | Account id of the logged-in user |
+                    | `exch` | yes | Exchange |
+                    | `tsym` | yes | Trading symbol |
+                    | `qty` | yes | Quantity to convert |
+                    | `prd` | yes | New product |
+                    | `prevprd` | yes | Original product |
+                    | `trantype` | yes | B or S |
+                    | `postype` | yes | `Day` or `CF` (carry forward) |
+                    | `ordersource` | no | `API`, for logging |
+                  example: '{"uid":"USER_ID","actid":"USER_ID","exch":"NSE","tsym":"CANBK-EQ","qty":"1","prd":"I","prevprd":"C","trantype":"B","postype":"Day","ordersource":"API"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","actid":"USER_ID","exch":"NSE","tsym":"CANBK-EQ","qty":"1","prd":"I","prevprd":"C","trantype":"B","postype":"Day","ordersource":"API"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/SimpleStatResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/product-conversion
+  /SpanCalc:
+    post:
+      tags:
+      - Orders & Trades
+      summary: SpanCalc
+      operationId: spanCalc
+      description: 'Margin requirement (SPAN + exposure) for a list of positions. Each item of `pos` has:
+        `prd` (C/M/H), `exch` (NFO, CDS, MCX), `instname` (FUTSTK, FUTIDX, OPTSTK, FUTCUR ...), `symname`,
+        `exd` (DD-MMM-YYYY), `optt` (CE/PE), `strprc`, `buyqty`, `sellqty`, `netqty`.'
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `actid` | yes | Any account id, preferably the real one |
+                    | `pos` | yes | Array of position objects (see above) |
+                  example: '{"actid":"USER_ID","pos":[{"prd":"M","exch":"NFO","instname":"OPTIDX","symname":"NIFTY","exd":"29-DEC-2022","optt":"CE","strprc":"11900.00","buyqty":"0","sellqty":"0","netqty":"50"}]}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"actid":"USER_ID","pos":[{"prd":"M","exch":"NFO","instname":"OPTIDX","symname":"NIFTY","exd":"29-DEC-2022","optt":"CE","strprc":"11900.00","buyqty":"0","sellqty":"0","netqty":"50"}]}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/SpanCalcResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+  /PositionBook:
+    post:
+      tags:
+      - Positions, Holdings & Funds
+      summary: PositionBook
+      operationId: getPositionBook
+      description: Overnight and day positions.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `actid` | yes | Account id of the logged-in user |
+                  example: '{"uid":"USER_ID","actid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","actid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/PositionItem'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/positions
+  /InteropPositionBook:
+    post:
+      tags:
+      - Positions, Holdings & Funds
+      summary: InteropPosition book
+      operationId: interopPositionBook
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /Holdings:
+    post:
+      tags:
+      - Positions, Holdings & Funds
+      summary: Holdings
+      operationId: getHoldings
+      description: Holdings list.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `actid` | yes | Account id of the logged-in user |
+                    | `prd` | yes | Product name |
+                  example: '{"uid":"USER_ID","actid":"USER_ID","prd":"C"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","actid":"USER_ID","prd":"C"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/HoldingItem'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/holdings
+  /HoldingsConv:
+    post:
+      tags:
+      - Positions, Holdings & Funds
+      summary: Holdings Conversion
+      operationId: holdingsConversion
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /Limits:
+    post:
+      tags:
+      - Positions, Holdings & Funds
+      summary: Limits
+      operationId: getLimits
+      description: Margin and fund limits.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `actid` | yes | Account id of the logged-in user |
+                    | `prd` | no | Product name |
+                    | `seg` | no | CM / FO / FX |
+                    | `exch` | no | NSE / BSE / MCX |
+                  example: '{"uid":"USER_ID","actid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","actid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/Limits'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/funds-limits
+  /GetSubLimits:
+    post:
+      tags:
+      - Positions, Holdings & Funds
+      summary: GetSubLimits
+      operationId: getSubLimits
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /GetMaxPayoutAmount:
+    post:
+      tags:
+      - Positions, Holdings & Funds
+      summary: GetMaxPayoutAmount
+      operationId: getMaxPayoutAmount
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /GetOrderReport:
+    post:
+      tags:
+      - Reports
+      summary: GetOrderReport
+      operationId: getOrderReport
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                    | `actid` | yes | See documentation |
+                  example: '{"uid":"USER_ID","actid":"ACCOUNT_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","actid":"ACCOUNT_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /GetTradeReport:
+    post:
+      tags:
+      - Reports
+      summary: GetTradeReport
+      operationId: getTradeReport
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                    | `actid` | yes | See documentation |
+                  example: '{"uid":"USER_ID","actid":"ACCOUNT_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","actid":"ACCOUNT_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /GetSecurityInfo:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: Get SecurityInfo
+      operationId: getSecurityInfo
+      description: Full contract details for a token.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `exch` | yes | Exchange |
+                    | `token` | yes | Contract token |
+                  example: '{"uid":"USER_ID","exch":"NSE","token":"22"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","exch":"NSE","token":"22"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/SecurityInfoResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/security-info
+  /GetQuotes:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: GetQuotes
+      operationId: getQuotes
+      description: Quote and 5-level depth for a token.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `exch` | yes | Exchange |
+                    | `token` | yes | Contract token |
+                  example: '{"uid":"USER_ID","exch":"NSE","token":"22"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","exch":"NSE","token":"22"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/QuoteResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/Get-Quotes
+  /EODChartData:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: EODChartData
+      operationId: eODChartData
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /GetIndexList:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: GetIndexList
+      operationId: getIndexList
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /GetOptionChain:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: GetOptionChain
+      operationId: getOptionChain
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /GetOptionGreek:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: GetOptionGreek
+      operationId: getOptionGreek
+      description: Option greeks. Fields below follow the Postman collection. The older Python wrapper
+        documents a different field set (`exd`, `strprc`, `sptprc`, `int_rate`, `volatility`, `optt`);
+        confirm which the gateway expects.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `exch` | yes | Exchange, e.g. NFO |
+                    | `tsym` | yes | Trading symbol |
+                    | `strprc` | yes | Strike price |
+                    | `expd` | yes | Expiry date |
+                    | `optt` | yes | CE or PE |
+                    | `ltp` | no | Last traded price |
+                  example: '{"uid":"USER_ID","exch":"NFO","tsym":"<symbol>","strprc":"<strike_price>","expd":"<expiry>","optt":"CE","ltp":"0"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","exch":"NFO","tsym":"<symbol>","strprc":"<strike_price>","expd":"<expiry>","optt":"CE","ltp":"0"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/OptionGreekResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+  /GetLinkedScrips:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: GetLinkedScrips
+      operationId: getLinkedScrips
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /GetUnderlyingExchToken:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: GetUnderlyingExchToken
+      operationId: getUnderlyingExchToken
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /ExchMsg:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: ExchMsg
+      operationId: exchMsg
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /GetBrokerMsg:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: GetBrokerMsg
+      operationId: getBrokerMsg
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /ExchStatus:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: ExchStatus
+      operationId: exchStatus
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /AMOStatusFlag:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: AMOStatusFlag
+      operationId: aMOStatusFlag
+      description: Documented in the Postman collection with only `uid` (and `actid` where shown). Request
+        and response fields still need to be added from the Shoonya API documentation.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | See documentation |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      x-needs-review: true
+  /TPSeries:
+    post:
+      tags:
+      - Market Data & Reference
+      summary: TPSeries
+      operationId: getTimePriceSeries
+      description: Intraday candle series for a token.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                    | `exch` | yes | Exchange |
+                    | `token` | yes | Contract token |
+                    | `st` | no | Start time, seconds since 1 Jan 1970 |
+                    | `et` | no | End time, seconds since 1 Jan 1970 |
+                    | `intrv` | no | Candle size in minutes: 1, 3, 5, 10, 15, 30, 60, 120, 240 (default 1) |
+                  example: '{"uid":"USER_ID","exch":"NSE","token":"22","st":"1700000000","intrv":"5"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID","exch":"NSE","token":"22","st":"1700000000","intrv":"5"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/time-price-series
+  /Logout:
+    post:
+      tags:
+      - Auth & Account
+      summary: Logout
+      operationId: logout
+      description: Terminate the session. Not part of the Postman collection; added from the README and
+        docs.
+      externalDocs:
+        description: Documentation page
+        url: https://shoonya.com/api-documentation/logout
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - jData
+              properties:
+                jData:
+                  type: string
+                  description: |-
+                    JSON payload sent as the `jData` field.
+
+                    | Field | Required | Description |
+                    |---|---|---|
+                    | `uid` | yes | Logged-in user id |
+                  example: '{"uid":"USER_ID"}'
+          text/plain:
+            schema:
+              type: string
+              description: Raw body of the form `jData=<compact JSON>`.
+              example: jData={"uid":"USER_ID"}
+      responses:
+        '200':
+          description: 'HTTP 200 is returned for both outcomes. Check `stat`: `Ok` = success, `Not_Ok`
+            = failure with `emsg`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/LogoutResponse'
+                - $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid Bearer token.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Access token returned by `GenAcsTok`.
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+      - stat
+      - emsg
+      properties:
+        stat:
+          type: string
+          enum:
+          - Not_Ok
+        emsg:
+          type: string
+          description: 'Human-readable error detail, e.g. `Session Expired : Invalid Session Key`.'
+        request_time:
+          type: string
+          description: Server time of the response.
+    GenericObject:
+      type: object
+      description: Endpoint response whose field list is not yet documented in this spec. Check `stat`
+        first.
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          - Not_Ok
+        emsg:
+          type: string
+          description: Present only when `stat` is `Not_Ok`.
+        request_time:
+          type: string
+      additionalProperties: true
+    GenericResponse:
+      description: Either an object with `stat`, or an array of objects for list endpoints.
+      oneOf:
+      - $ref: '#/components/schemas/GenericObject'
+      - type: array
+        items:
+          $ref: '#/components/schemas/GenericObject'
+    OrderBookItem:
+      type: object
+      properties:
+        stat:
+          type: string
+        exch:
+          type: string
+          description: Exchange segment
+        tsym:
+          type: string
+          description: Trading symbol / contract
+        norenordno:
+          type: string
+          description: Noren order number
+        prc:
+          type: string
+          description: Order price
+        qty:
+          type: string
+          description: Order quantity
+        prd:
+          type: string
+          description: Product alias name (from `prarr` in User Details)
+        status:
+          type: string
+          description: Order status, e.g. OPEN, COMPLETE, REJECT
+        trantype:
+          type: string
+          description: Transaction type
+          enum:
+          - B
+          - S
+        prctyp:
+          type: string
+          description: Price type (LMT / MKT / ...)
+        fillshares:
+          type: string
+          description: Total traded quantity
+        avgprc:
+          type: string
+          description: Average trade price
+        rejreason:
+          type: string
+          description: Rejection reason (rejected orders only)
+        exchordid:
+          type: string
+          description: Exchange order number
+        cancelqty:
+          type: string
+          description: Cancelled quantity
+        remarks:
+          type: string
+          description: Tag entered at order entry
+        dscqty:
+          type: string
+          description: Disclosed quantity
+        trgprc:
+          type: string
+          description: Trigger price
+        ret:
+          type: string
+          description: Order validity
+          enum:
+          - DAY
+          - IOC
+          - EOS
+        uid:
+          type: string
+        actid:
+          type: string
+        bpprc:
+          type: string
+          description: Book profit price (bracket orders)
+        blprc:
+          type: string
+          description: Book loss price (H and B products)
+        trailprc:
+          type: string
+          description: Trailing price (H and B products)
+        amo:
+          type: string
+          description: Yes / No
+        pp:
+          type: string
+          description: Price precision
+        ti:
+          type: string
+          description: Tick size
+        ls:
+          type: string
+          description: Lot size
+        token:
+          type: string
+          description: Contract token
+        norentm:
+          type: string
+        ordenttm:
+          type: string
+        exch_tm:
+          type: string
+        snoordt:
+          type: string
+          description: 0 for profit leg, 1 for stop-loss leg
+        snonum:
+          type: string
+          description: Present for H and B products on profit/SL orders
+      additionalProperties: true
+    OrderHistoryItem:
+      type: object
+      properties:
+        stat:
+          type: string
+        exch:
+          type: string
+          description: Exchange segment
+        tsym:
+          type: string
+          description: Trading symbol / contract
+        norenordno:
+          type: string
+          description: Noren order number
+        prc:
+          type: string
+          description: Order price
+        qty:
+          type: string
+          description: Order quantity
+        prd:
+          type: string
+          description: Product alias name (from `prarr` in User Details)
+        status:
+          type: string
+          description: Order status, e.g. OPEN, COMPLETE, REJECT
+        trantype:
+          type: string
+          description: Transaction type
+          enum:
+          - B
+          - S
+        prctyp:
+          type: string
+          description: Price type (LMT / MKT / ...)
+        fillshares:
+          type: string
+          description: Total traded quantity
+        avgprc:
+          type: string
+          description: Average trade price
+        rejreason:
+          type: string
+          description: Rejection reason (rejected orders only)
+        exchordid:
+          type: string
+          description: Exchange order number
+        cancelqty:
+          type: string
+          description: Cancelled quantity
+        remarks:
+          type: string
+          description: Tag entered at order entry
+        dscqty:
+          type: string
+          description: Disclosed quantity
+        trgprc:
+          type: string
+          description: Trigger price
+        ret:
+          type: string
+          description: Order validity
+          enum:
+          - DAY
+          - IOC
+          - EOS
+        uid:
+          type: string
+        actid:
+          type: string
+        bpprc:
+          type: string
+          description: Book profit price (bracket orders)
+        blprc:
+          type: string
+          description: Book loss price (H and B products)
+        trailprc:
+          type: string
+          description: Trailing price (H and B products)
+        amo:
+          type: string
+          description: Yes / No
+        pp:
+          type: string
+          description: Price precision
+        ti:
+          type: string
+          description: Tick size
+        ls:
+          type: string
+          description: Lot size
+        token:
+          type: string
+          description: Contract token
+        norentm:
+          type: string
+        ordenttm:
+          type: string
+        exch_tm:
+          type: string
+        snoordt:
+          type: string
+          description: 0 for profit leg, 1 for stop-loss leg
+        snonum:
+          type: string
+          description: Present for H and B products on profit/SL orders
+        rpt:
+          type: string
+          description: Report type, e.g. Fill, New, PendingNew, NewAck
+      additionalProperties: true
+    TradeBookItem:
+      type: object
+      properties:
+        stat:
+          type: string
+        exch:
+          type: string
+          description: Exchange segment
+        tsym:
+          type: string
+          description: Trading symbol
+        norenordno:
+          type: string
+          description: Noren order number
+        qty:
+          type: string
+          description: Order quantity
+        prc:
+          type: string
+          description: Order price
+        prd:
+          type: string
+          description: Product alias name
+        trantype:
+          type: string
+          description: Transaction type
+          enum:
+          - B
+          - S
+        prctyp:
+          type: string
+          description: Price type
+        fillshares:
+          type: string
+          description: Total traded quantity
+        avgprc:
+          type: string
+          description: Average trade price
+        exchordid:
+          type: string
+          description: Exchange order number
+        remarks:
+          type: string
+        ret:
+          type: string
+          description: Order validity
+          enum:
+          - DAY
+          - IOC
+          - EOS
+        uid:
+          type: string
+        actid:
+          type: string
+        pp:
+          type: string
+          description: Price precision
+        ti:
+          type: string
+          description: Tick size
+        ls:
+          type: string
+          description: Lot size
+        cstFrm:
+          type: string
+          description: Custom firm
+        fltm:
+          type: string
+          description: Fill time
+        flid:
+          type: string
+          description: Fill ID
+        flqty:
+          type: string
+          description: Fill quantity
+        flprc:
+          type: string
+          description: Fill price
+        ordersource:
+          type: string
+          description: Order source
+        token:
+          type: string
+          description: Contract token
+        norentm:
+          type: string
+        exch_tm:
+          type: string
+      additionalProperties: true
+    ExchTsym:
+      type: object
+      properties:
+        exch:
+          type: string
+          description: Exchange (NSE, BSE, NFO ...)
+        tsym:
+          type: string
+          description: Trading symbol
+        token:
+          type: string
+          description: Contract token
+        pp:
+          type: string
+          description: Price precision
+        ti:
+          type: string
+          description: Tick size
+        ls:
+          type: string
+          description: Lot size
+      additionalProperties: true
+    HoldingItem:
+      type: object
+      properties:
+        stat:
+          type: string
+        exch_tsym:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExchTsym'
+        holdqty:
+          type: string
+          description: Holding quantity
+        dpqty:
+          type: string
+          description: DP holding quantity
+        npoadqty:
+          type: string
+          description: Non-POA display quantity
+        colqty:
+          type: string
+          description: Collateral quantity
+        benqty:
+          type: string
+          description: Beneficiary quantity
+        unplgdqty:
+          type: string
+          description: Unpledged quantity
+        brkcolqty:
+          type: string
+          description: Broker collateral
+        btstqty:
+          type: string
+          description: BTST quantity
+        btstcolqty:
+          type: string
+          description: BTST collateral quantity
+        usedqty:
+          type: string
+          description: Holding used today
+        upldprc:
+          type: string
+          description: Average price uploaded with holdings
+      additionalProperties: true
+    PositionItem:
+      type: object
+      properties:
+        stat:
+          type: string
+        exch:
+          type: string
+          description: Exchange segment
+        tsym:
+          type: string
+          description: Trading symbol
+        token:
+          type: string
+          description: Contract token
+        uid:
+          type: string
+        actid:
+          type: string
+        prd:
+          type: string
+          description: Product name
+        netqty:
+          type: string
+          description: Net position quantity
+        netavgprc:
+          type: string
+          description: Net position average price
+        daybuyqty:
+          type: string
+        daysellqty:
+          type: string
+        daybuyavgprc:
+          type: string
+        daysellavgprc:
+          type: string
+        daybuyamt:
+          type: string
+        daysellamt:
+          type: string
+        cfbuyqty:
+          type: string
+          description: Carry-forward buy quantity
+        cfsellqty:
+          type: string
+        cforgavgprc:
+          type: string
+          description: Original average price
+        cfbuyavgprc:
+          type: string
+        cfsellavgprc:
+          type: string
+        cfbuyamt:
+          type: string
+        cfsellamt:
+          type: string
+        lp:
+          type: string
+          description: LTP
+        rpnl:
+          type: string
+          description: Realized PnL
+        urmtom:
+          type: string
+          description: Unrealized MTOM
+        bep:
+          type: string
+          description: Break-even price
+        openbuyqty:
+          type: string
+        opensellqty:
+          type: string
+        openbuyamt:
+          type: string
+        opensellamt:
+          type: string
+        openbuyavgprc:
+          type: string
+        opensellavgprc:
+          type: string
+        mult:
+          type: string
+        pp:
+          type: string
+        prcftr:
+          type: string
+          description: gn*pn/(gd*pd)
+        ti:
+          type: string
+          description: Tick size
+        ls:
+          type: string
+          description: Lot size
+      additionalProperties: true
+    Limits:
+      type: object
+      description: Fund and margin limits. Per-segment/product breakup fields (e.g. `rzpnl_e_i`, `span_d_m`,
+        `brkage_c_b`) are also returned as strings; see the Funds & Limits documentation page.
+      properties:
+        stat:
+          type: string
+        actid:
+          type: string
+        prd:
+          type: string
+          description: Product name
+        seg:
+          type: string
+          description: 'Segment: CM / FO / FX'
+        exch:
+          type: string
+        cash:
+          type: string
+          description: Cash margin available
+        payin:
+          type: string
+          description: Payins today
+        payout:
+          type: string
+          description: Withdrawals requested today
+        brkcollamt:
+          type: string
+          description: Prevalued collateral amount
+        unclearedcash:
+          type: string
+          description: Uncleared cash (cheque payins)
+        daycash:
+          type: string
+          description: Additional leverage / broker-added amount
+        marginused:
+          type: string
+          description: Total margin used today
+        mtomcurper:
+          type: string
+          description: MTOM current percentage
+        cbu:
+          type: string
+          description: CAC buy used
+        csc:
+          type: string
+          description: CAC sell credits
+        rpnl:
+          type: string
+          description: Realized PnL
+        unmtom:
+          type: string
+          description: Unrealized MTOM
+        marprt:
+          type: string
+          description: Covered product margins
+        span:
+          type: string
+          description: Span used
+        expo:
+          type: string
+          description: Exposure margin
+        premium:
+          type: string
+          description: Premium used
+        varelm:
+          type: string
+          description: VAR + ELM margin
+        grexpo:
+          type: string
+          description: Gross exposure
+        greexpo_d:
+          type: string
+          description: Gross exposure (derivatives)
+        scripbskmar:
+          type: string
+          description: Scrip basket margin
+        addscripbskmrg:
+          type: string
+          description: Additional scrip basket margin
+        brokerage:
+          type: string
+          description: Brokerage amount
+        collateral:
+          type: string
+          description: Collateral from uploaded holdings
+        grcoll:
+          type: string
+          description: Valuation of uploaded holdings pre-haircut
+        turnoverlmt:
+          type: string
+        pendordvallmt:
+          type: string
+        turnover:
+          type: string
+        pendordval:
+          type: string
+          description: Pending order value
+        peak_mar:
+          type: string
+          description: Peak margin used
+        request_time:
+          type: string
+        emsg:
+          type: string
+      additionalProperties:
+        type: string
+    SearchScripResponse:
+      type: object
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          description: Success indicator.
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExchTsym'
+        emsg:
+          type: string
+      required:
+      - stat
+      additionalProperties: true
+    SpanCalcResponse:
+      type: object
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          description: Success indicator.
+        request_time:
+          type: string
+        span:
+          type: string
+          description: Span value
+        expo:
+          type: string
+          description: Exposure margin
+        span_trade:
+          type: string
+          description: Span ignoring buyqty/sellqty
+        expo_trade:
+          type: string
+          description: Exposure ignoring buyqty/sellqty
+      required:
+      - stat
+      additionalProperties: true
+    OptionGreekResponse:
+      type: object
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          description: Success indicator.
+        request_time:
+          type: string
+        cal_price:
+          type: string
+          description: Call price
+        put_price:
+          type: string
+          description: Put price
+        cal_delta:
+          type: string
+          description: Call delta
+        put_delta:
+          type: string
+          description: Put delta
+        cal_gamma:
+          type: string
+          description: Call gamma
+        put_gamma:
+          type: string
+          description: Put gamma
+        cal_theta:
+          type: string
+          description: Call theta
+        put_theta:
+          type: string
+          description: Put theta
+        cal_rho:
+          type: string
+          description: Call rho
+        put_rho:
+          type: string
+          description: Put rho
+        cal_vego:
+          type: string
+          description: Call vega
+        put_vego:
+          type: string
+          description: Put vega
+      required:
+      - stat
+      additionalProperties: true
+    SecurityInfoResponse:
+      type: object
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          description: Success indicator.
+        request_time:
+          type: string
+        exch:
+          type: string
+          description: Exchange
+        tsym:
+          type: string
+          description: Trading symbol
+        cname:
+          type: string
+          description: Company name
+        symname:
+          type: string
+          description: Symbol name
+        seg:
+          type: string
+          description: Segment
+        exd:
+          type: string
+          description: Expiry date
+        instname:
+          type: string
+          description: Instrument name
+        strprc:
+          type: string
+          description: Strike price
+        optt:
+          type: string
+          description: Option type
+        isin:
+          type: string
+          description: ISIN
+        ti:
+          type: string
+          description: Tick size
+        ls:
+          type: string
+          description: Lot size
+        pp:
+          type: string
+          description: Price precision
+        mult:
+          type: string
+          description: Multiplier
+        gp_nd:
+          type: string
+          description: gn/gd * pn/pd
+        prcunt:
+          type: string
+          description: Price units
+        prcqqty:
+          type: string
+          description: Price quote qty
+        trdunt:
+          type: string
+          description: Trade units
+        delunt:
+          type: string
+          description: Delivery units
+        frzqty:
+          type: string
+          description: Freeze quantity
+        gsmind:
+          type: string
+          description: GSM indicator
+        elmbmrg:
+          type: string
+          description: ELM buy margin
+        elmsmrg:
+          type: string
+          description: ELM sell margin
+        addbmrg:
+          type: string
+          description: Additional long margin
+        addsmrg:
+          type: string
+          description: Additional short margin
+        splbmrg:
+          type: string
+          description: Special long margin
+        splsmrg:
+          type: string
+          description: Special short margin
+        delmrg:
+          type: string
+          description: Delivery margin
+        tenmrg:
+          type: string
+          description: Tender margin
+        tenstrd:
+          type: string
+          description: Tender start date
+        tenendd:
+          type: string
+          description: Tender end date
+        exestrd:
+          type: string
+          description: Exercise start date
+        exeendd:
+          type: string
+          description: Exercise end date
+        elmmrg:
+          type: string
+          description: ELM margin
+        varmrg:
+          type: string
+          description: VAR margin
+        expmrg:
+          type: string
+          description: Exposure margin
+        token:
+          type: string
+          description: Contract token
+        prcftr_d:
+          type: string
+          description: ((GN / GD) * (PN/PD))
+      required:
+      - stat
+      additionalProperties: true
+    QuoteResponse:
+      type: object
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          description: Success indicator.
+        request_time:
+          type: string
+        exch:
+          type: string
+          description: Exchange
+        tsym:
+          type: string
+          description: Trading symbol
+        cname:
+          type: string
+          description: Company name
+        symname:
+          type: string
+          description: Symbol name
+        seg:
+          type: string
+          description: Segment
+        instname:
+          type: string
+          description: Instrument name
+        isin:
+          type: string
+          description: ISIN
+        pp:
+          type: string
+          description: Price precision
+        ls:
+          type: string
+          description: Lot size
+        ti:
+          type: string
+          description: Tick size
+        mult:
+          type: string
+          description: Multiplier
+        uc:
+          type: string
+          description: Upper circuit limit
+        lc:
+          type: string
+          description: Lower circuit limit
+        prcftr_d:
+          type: string
+          description: Price factor
+        token:
+          type: string
+          description: Token
+        lp:
+          type: string
+          description: LTP
+        o:
+          type: string
+          description: Open
+        h:
+          type: string
+          description: Day high
+        l:
+          type: string
+          description: Day low
+        v:
+          type: string
+          description: Volume
+        ltq:
+          type: string
+          description: Last trade quantity
+        ltt:
+          type: string
+          description: Last trade time
+        bp1:
+          type: string
+          description: Best buy price 1
+        sp1:
+          type: string
+          description: Best sell price 1
+        bq1:
+          type: string
+          description: Best buy quantity 1
+        sq1:
+          type: string
+          description: Best sell quantity 1
+        bo1:
+          type: string
+          description: Best buy orders 1
+        so1:
+          type: string
+          description: Best sell orders 1
+        bp2:
+          type: string
+          description: Best buy price 2
+        sp2:
+          type: string
+          description: Best sell price 2
+        bq2:
+          type: string
+          description: Best buy quantity 2
+        sq2:
+          type: string
+          description: Best sell quantity 2
+        bo2:
+          type: string
+          description: Best buy orders 2
+        so2:
+          type: string
+          description: Best sell orders 2
+        bp3:
+          type: string
+          description: Best buy price 3
+        sp3:
+          type: string
+          description: Best sell price 3
+        bq3:
+          type: string
+          description: Best buy quantity 3
+        sq3:
+          type: string
+          description: Best sell quantity 3
+        bo3:
+          type: string
+          description: Best buy orders 3
+        so3:
+          type: string
+          description: Best sell orders 3
+        bp4:
+          type: string
+          description: Best buy price 4
+        sp4:
+          type: string
+          description: Best sell price 4
+        bq4:
+          type: string
+          description: Best buy quantity 4
+        sq4:
+          type: string
+          description: Best sell quantity 4
+        bo4:
+          type: string
+          description: Best buy orders 4
+        so4:
+          type: string
+          description: Best sell orders 4
+        bp5:
+          type: string
+          description: Best buy price 5
+        sp5:
+          type: string
+          description: Best sell price 5
+        bq5:
+          type: string
+          description: Best buy quantity 5
+        sq5:
+          type: string
+          description: Best sell quantity 5
+        bo5:
+          type: string
+          description: Best buy orders 5
+        so5:
+          type: string
+          description: Best sell orders 5
+      required:
+      - stat
+      additionalProperties: true
+    AccessTokenResponse:
+      type: object
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          description: Success indicator.
+        emsg:
+          type: string
+        access_token:
+          type: string
+          description: Access token used as the Bearer token on every later call. Field name to be confirmed
+            against a live response.
+        refresh_token:
+          type: string
+          description: Refresh token. Field name to be confirmed against a live response.
+        uid:
+          type: string
+          description: User id
+        actid:
+          type: string
+          description: Account id
+      required:
+      - stat
+      additionalProperties: true
+      description: Field names other than `stat` are taken from the Python wrapper return values (access
+        token, user id, refresh token, account id) and should be confirmed.
+    OrderPlacedResponse:
+      type: object
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          description: Success indicator.
+        request_time:
+          type: string
+        norenordno:
+          type: string
+          description: Noren order number (success only).
+      required:
+      - stat
+      additionalProperties: true
+    OrderResultResponse:
+      type: object
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          description: Success indicator.
+        request_time:
+          type: string
+        result:
+          type: string
+          description: Noren order number of the affected order.
+      required:
+      - stat
+      additionalProperties: true
+    ExitOrderResponse:
+      type: object
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          description: Success indicator.
+        request_time:
+          type: string
+        dmsg:
+          type: string
+          description: Display message (success only).
+      required:
+      - stat
+      additionalProperties: true
+    SimpleStatResponse:
+      type: object
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          description: Success indicator.
+        request_time:
+          type: string
+      required:
+      - stat
+      additionalProperties: true
+    LogoutResponse:
+      type: object
+      properties:
+        stat:
+          type: string
+          enum:
+          - Ok
+          - OK
+          description: Success indicator.
+        request_time:
+          type: string
+          description: Present on successful logout only.
+      required:
+      - stat
+      additionalProperties: true
+    ForgotPwdOtpResponse:
+      type: object
+      properties:
+        uid:
+          type: string
+        ReqStatus:
+          type: string
+          description: '`OTP generation success` on success.'
+        stat:
+          type: string
+        emsg:
+          type: string
+      additionalProperties: true
