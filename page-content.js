@@ -11,7 +11,7 @@ const PAGE_CONTENT = {
       h: "Overview",
       body: `<p>The Shoonya API, powered by Finvasia, gives developers and traders a secure, reliable,
       and high-performance interface to automate trades, access live market data, and manage
-      portfolios programmatically.</p>
+      portfolios programmatically.
       <p>Manual trading doesn't scale, and it doesn't fail gracefully. Automate the workflow instead:
       fewer operational errors, consistent execution, and a system you can actually test. Noren OMS
       was built for the scale of the Indian broking market and is under continuous testing for
@@ -206,28 +206,29 @@ print("Order placed:", order)`)}
     </ul>` },
   ],
 },
-
-  "auth-overview": {
+"auth-overview": {
   badge: null,
   desc: "How to authenticate against Shoonya, and what to know before you start.",
   sections: [
-    { h: "Overview", body: `<p>Every Shoonya API call runs against an authenticated session. Shoonya issues a <code>Acesstoken</code> after a successful login, which you attach to every subsequent request. There is no separate long-lived API key model — the token itself is your credential for the trading day.</p>` },
+    { h: "Overview", body: `<p>Every Shoonya API call runs against an authenticated session. Shoonya issues a <code>Acesstoken</code> after a successful login, which you attach to every subsequent request. There is no separate long-lived API key model — the token itself is your credential, and it is valid for <strong>24 hours only</strong> from the moment it is generated.</p>` },
     { h: "How to authenticate", body: `
     <div class="card-grid">
       <div class="mini-card"><div class="k">All integrations</div><div class="v">Manual Login (OAuth) — see <a href="#" data-nav="manual-login-oauth">guide</a></div></div>
       <div class="mini-card"><div class="k">Ending a session</div><div class="v"><a href="#" data-nav="logout">Logout</a></div></div>
     </div>
     <p>OAuth is currently the only supported login flow — there is no TOTP auto-login and no separate token-renewal endpoint. See <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for the full authorize URL, redirect handling, and checksum reference.</p>` },
-    { h: "Session lifetime", body: `<p>Sessions are valid for the trading day and are invalidated at the daily server reset, regardless of activity. Since there's no renewal call, build your automation to re-run the full OAuth login flow once per day rather than assuming a persistent long-running token — see <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for how to automate this.</p>
+    { h: "Session lifetime", body: `<p>An access token is valid for <strong>24 hours only</strong> from the time it is generated. Every fresh login must generate a new access token — tokens cannot be extended, refreshed, or reused once they expire. This is a SEBI compliance requirement for retail algo trading.</p>
+    <p>Since there's no renewal call, build your automation to re-run the full OAuth login flow for every new session rather than assuming a persistent long-running token — see <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for how to automate this.</p>
     <div class="callout"><b>Convention</b>Every endpoint in this documentation that requires auth expects the token as a Bearer header: <code>Authorization: Bearer &lt;Acesstoken&gt;</code>.</div>` },
     { h: "Security notes", body: `<ul>
       <li>Never hardcode <code>client_id</code>, <code>secret_code</code>, or the OAuth <code>code</code>/checksum in source control — load them from environment variables or a secrets manager.</li>
       <li>Treat <code>Acesstoken</code> as a bearer credential with the same sensitivity as a password: don't log it, don't put it in error messages sent to third-party monitoring tools.</li>
-      <li>If you suspect a token has leaked, call <a href="#" data-nav="logout">Logout</a> immediately to invalidate the session rather than waiting for the daily reset.</li>
+      <li>If you suspect a token has leaked, call <a href="#" data-nav="logout">Logout</a> immediately to invalidate the session rather than waiting for the token to expire.</li>
     </ul>` },
     { h: "Notes", body: `<p>OAuth-specific security considerations (state parameter, PKCE, redirect URI validation) are covered on <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a>.</p>` },
   ],
 },
+
 
   "api-structure": {
   badge: null,
@@ -490,10 +491,7 @@ print(current_otp)  # 6-digit code, valid ~30 seconds`)}` },
     <div class="note-box"><strong>Note:</strong> Have a use case for TOTP-based login? Reach out to the API support team to share your requirements.</div>` },
   ],
 },
-
-
-
-  "ip-whitelisting": {
+"ip-whitelisting": {
   badge: null,
   desc: "Register the static IP address(es) your API requests will originate from — required before the OAuth login flow will work.",
   sections: [
@@ -504,13 +502,20 @@ print(current_otp)  # 6-digit code, valid ~30 seconds`)}` },
       <li>Click your profile icon, then open <strong>API Key Generation</strong>.</li>
       <li>Confirm the <strong>Client ID</strong> shown matches the account you intend to trade through.</li>
       <li>Reveal (eye icon) and copy the <strong>Secret Code</strong> — this is the <code>secret_code</code> input to the <a href="#" data-nav="manual-login-oauth">GenAcsTok checksum</a>. Treat it like a password; never commit it to source control.</li>
-      <li>Confirm the <strong>URL</strong> field reads <code>https://api.shoonya.com/OAuthlogin/authorize/oauth</code> — this is the OAuth authorize endpoint your login flow redirects to.</li>
-      <li>Enter your <strong>Primary IP Address</strong> — the static public IPv4 address your requests will originate from (your server/VPS IP, not your laptop's home/office IP unless that's genuinely static).</li>
+      <li>Confirm the <strong>URL</strong> field shows the OAuth authorize endpoint for your IP type — <code>https://api.shoonya.com/OAuthlogin/authorize/oauth</code> if you registered an IPv4 address, or <code>https://trade.shoonya.com/OAuthlogin/authorize/oauth</code> if you registered an IPv6 address. See <strong>IP address format</strong> below.</li>
+      <li>Enter your <strong>Primary IP Address</strong> — the static public IPv4 or IPv6 address your requests will originate from (your server/VPS IP, not your laptop's home/office IP unless that's genuinely static).</li>
       <li>Optionally set a <strong>Backup IP Address</strong> if you run a failover server.</li>
       <li>If you expect to exceed 10 orders/second, check <strong>"Applicable for more than 10 orders per second"</strong> — see the callout below before enabling this.</li>
       <li>Click <strong>Update</strong> to save.</li>
     </ol>` },
-    { h: "IP address format", body: `<p>Only <strong>IPv4 and IPv6 are supported</strong>for the primary/backup IP fields. Both full and compressed IPv6 formats are accepted. For example, <code>2001:0db8:0000:0000:0000:ff00:0042:8329</code> and the compressed format <code>2001:db8::ff00:42:8329</code> are valid IPv6 addresses.</p>
+    { h: "IP address format", body: `<p>Both <strong>IPv4 and IPv6</strong> are supported for the primary/backup IP fields. Both full and compressed IPv6 formats are accepted. For example, <code>2001:0db8:0000:0000:0000:ff00:0042:8329</code> and the compressed format <code>2001:db8::ff00:42:8329</code> are valid IPv6 addresses.</p>
+    <p>The domain you use for the OAuth authorize URL depends on the IP version your requests originate from:</p>
+    <table class="param-table">
+      <tr><th>IP version</th><th>Domain</th><th>Authorize URL</th></tr>
+      <tr><td>IPv4</td><td><code>api.shoonya.com</code></td><td><code>https://api.shoonya.com/OAuthlogin/authorize/oauth</code></td></tr>
+      <tr><td>IPv6</td><td><code>trade.shoonya.com</code></td><td><code>https://trade.shoonya.com/OAuthlogin/authorize/oauth</code></td></tr>
+    </table>
+    <p>IPv4 is enabled on the <code>api.shoonya.com</code> domain. If your server connects over IPv6, change the domain in the redirect/authorize URL to <code>trade.shoonya.com</code>.</p>
     <div class="callout warn"><b>Static IP required</b>The registered IP must be static. If you're running from a residential/dynamic-IP connection, requests will start failing with an auth/IP error whenever your ISP reassigns your address — host your integration on a server or VPS with a fixed IP instead.</div>` },
     { h: "Order-rate checkbox and Algo ID", body: `<p>The <strong>"Applicable for more than 10 orders per second"</strong> checkbox is not a self-service performance toggle — ~10 orders/sec is the standard per-user order-placement ceiling described on <a href="#" data-nav="rate-limits">Rate Limits</a>. To legitimately exceed it, you must first submit your strategy to the exchange and obtain a SEBI Algo ID; see <a href="#" data-nav="algo-compliance">SEBI Algo ID Framework</a> for the approval process. Checking this box without a corresponding exchange-approved Algo ID does not raise your actual throughput — it only tells Shoonya to expect Algo ID-tagged traffic.</p>` },
     { h: "After whitelisting", body: `<p>Once your IP is registered, continue to <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> to run the authorize → code → checksum → access-token exchange using the Client ID and Secret Code from this screen.</p>` },
@@ -520,10 +525,12 @@ print(current_otp)  # 6-digit code, valid ~30 seconds`)}` },
       <tr><td>OAuth/API calls fail immediately, even with a valid checksum</td><td>Requests are originating from an IP that isn't whitelisted — confirm the IP your server actually egresses on (it may differ from the IP you think it has, especially behind NAT/a load balancer) matches what's registered here.</td></tr>
       <tr><td>Worked yesterday, failing today with no code changes</td><td>Your "static" IP was reassigned by your ISP/cloud provider. Re-check and update the Primary IP Address field.</td></tr>
       <tr><td>Works from your laptop, fails from your server</td><td>You whitelisted your laptop's IP during testing instead of your production server's IP — update the field to the server's egress IP before deploying.</td></tr>
+      <tr><td>IPv6 server fails on the authorize/login step</td><td>The authorize URL is still using <code>api.shoonya.com</code> — IPv6 connections must use <code>trade.shoonya.com</code> instead.</td></tr>
     </table>` },
     { h: "Notes", body: `<p>See <a href="#" data-nav="vendors-partners">For Vendors / Partners</a> if you're integrating on behalf of multiple end users rather than trading a single account — vendor platforms generally handle IP whitelisting differently than a standalone OAuth user.</p>` },
   ],
 },
+
 
  // Python Login (Selenium)
   "python-login-selenium": {
@@ -795,30 +802,6 @@ else:
 
 
 
-// Token Renewal 
-
-"token-renewal": {
-  badge: "Comming Soon",
-  desc: "Extending or refreshing an access token without a full re-login. Not currently offered — see what to do instead below.",
-  sections: [
-    { h: "Not currently available", body: `<div class="stub-box">
-      <div><span class="stub-title">Not supported yet</span></div>
-      <p>There's no refresh-token or token-renewal endpoint in the Shoonya API — you cannot extend or silently refresh a <code>susertoken</code> before it expires. Once a session token expires or is invalidated, the only way to get a new one is to repeat the full login flow.</p>
-    </div>` },
-
-    { h: "What to do instead", body: `<table class="param-table">
-      <tr><th>Situation</th><th>What to do</th></tr>
-      <tr><td>Token has expired / API calls start returning auth errors</td><td>Re-run the full <a href="#" data-nav="manual-login-oauth">OAuth login flow</a> (authorize → <code>code</code> → <code>GenAcsTok</code> checksum → new <code>susertoken</code>) to get a fresh token.</td></tr>
-      <tr><td>Automating login so you don't do this by hand daily</td><td>Use a scheduled headless login (e.g. Selenium-based) to fetch a new token on a timer or at market open, and store it wherever your app reads credentials from.</td></tr>
-      <tr><td>Long-running processes (bots, dashboards)</td><td>Handle auth-error responses defensively — catch them, re-run the login flow, and retry the failed request rather than assuming the token stays valid indefinitely.</td></tr>
-    </table>` },
-
-    { h: "Token lifetime", body: `<p><!-- TODO: confirm and state the actual expiry window here (e.g. "tokens are valid until end of trading day" / "expire after N hours") once confirmed with the API team, so users know how often to re-login. --></p>` },
-
-    { h: "Planning around this?", body: `<p>If you're building something that needs a session to stay alive unattended for long periods, plan for scheduled re-login rather than a renewal call — the login flow itself is quick to automate (see the <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> page and the checksum calculator on that page).</p>` },
-  ],
-},
-
 // Validate-hs-token
 
 
@@ -990,34 +973,41 @@ FALSE`)}
 
   ],
 },
-
-
-  "vendors-partners": {
+"vendors-partners": {
   badge: null,
   desc: "Integration path for vendors and platform partners building on Shoonya's API on behalf of their own users.",
   sections: [
     { h: "Overview", body: `<p>Vendors and algo platforms integrating with Shoonya connect via a dedicated OAuth partner flow, separate from an individual user's own <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a>. A vendor integration lets your platform's users authenticate against their own Shoonya account without your platform ever handling their raw credentials.</p>` },
     { h: "Currently integrated vendors", body: `
     <table class="param-table">
-      <tr><th>Vendor</th><th>Status</th><th>Static IP required for end users?</th></tr>
-      <tr><td>AlgoTest</td><td>Integrated</td><td>No</td></tr>
-      <tr><td>Quantman</td><td>Integrated</td><td>No</td></tr>
-      <tr><td>Quantiply</td><td>Integrated</td><td>No</td></tr>
-      <tr><td>GoCharting</td><td>In progress</td><td>No (once live)</td></tr>
-      <tr><td>Tradetron</td><td>Integrated</td><td><strong>Yes — mandatory</strong></td></tr>
+      <tr><th>Vendor</th><th>Status</th></tr>
+      <tr><td>AlgoTest</td><td>Integrated</td></tr>
+      <tr><td>Quantman</td><td>Integrated</td></tr>
+      <tr><td>Quantiply</td><td>Integrated</td></tr>
     </table>
-    <p>For AlgoTest, Quantman, Quantiply, and (once live) GoCharting, the vendor's own integration handles connectivity at the platform level — individual end users of these platforms do <strong>not</strong> need to submit a static IP address to trade through Shoonya. Tradetron is the exception: its integration model requires every end user to register a static IP before their orders will be accepted, same as a standalone <a href="#" data-nav="manual-login-oauth">OAuth</a> user.</p>` },
-    { h: "OAuth authorize URL", body: `<p>Vendors initiate the login flow by directing their users to Shoonya's OAuth authorize endpoint:</p>
-    ${codeBlock("text", `https://api.shoonya.com/OAuthlogin/authorize/oauth?client_id=Your_app_key`)}
-    <p>Replace <code>Your_app_key</code> with the app key issued to your vendor integration. After the user authenticates, Shoonya redirects back to your registered redirect URL with an authorization code, which your backend then exchanges for an access token — see <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for the full code-exchange sequence.</p>` },
+    <p>For these vendors, the vendor's own integration handles connectivity at the platform level — individual end users of these platforms do <strong>not</strong> need to submit a static IP address to trade through Shoonya.</p>` },
+    { h: "OAuth authorize URL", body: `<p>Vendors initiate the login flow by directing their users to Shoonya's OAuth authorize endpoint, passing the <code>client_id</code> and a <code>state</code> value:</p>
+    ${codeBlock("text", `https://api.shoonya.com/OAuthlogin/authorize/oauth?client_id=Your_app_key&state=Your_state_value`)}
+    <p>Example:</p>
+    ${codeBlock("text", `https://api.shoonya.com/OAuthlogin/authorize/oauth?client_id=ABC123_U&state=ABC123`)}
+    <table class="param-table">
+      <tr><th>Parameter</th><th>Description</th></tr>
+      <tr><td><code>client_id</code></td><td>The app key issued to your vendor integration. Replace <code>Your_app_key</code> with your own key.</td></tr>
+      <tr><td><code>state</code></td><td>A unique, unguessable value generated by your platform for each login attempt. It is passed back unchanged on the redirect, so you can match the response to the original request and reject any callback with a missing or mismatched value (CSRF protection). It can also be used to identify which of your users started the login.</td></tr>
+    </table>
+    <p>After the user authenticates, Shoonya redirects back to your registered redirect URL with an authorization code and the same <code>state</code> value. Verify the <code>state</code> first, then exchange the code for an access token — see <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for the full code-exchange sequence.</p>` },
     { h: "Getting integrated", body: `<ul>
       <li>New vendor integrations require coordination with the API support team before going live — reach out to get an <code>app_key</code> issued and your redirect URL registered.</li>
-      <li>Confirm with the team whether your platform's user base falls into the static-IP-required category (like Tradetron) or the exempt category (like AlgoTest/Quantman/Quantiply) — this depends on the specific integration model agreed during onboarding, not solely on request volume.</li>
+      <li>Generate a fresh <code>state</code> value for every authorize request and validate it on the redirect before processing the authorization code.</li>
       <li>If your platform expects order volume near or above the <a href="#" data-nav="rate-limits">10 OPS threshold</a>, that needs to be flagged during onboarding as well, since it affects Algo ID classification per user.</li>
     </ul>` },
     { h: "Related", body: `<p>See <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for the token exchange steps following redirect, and <a href="#" data-nav="rate-limits">Rate Limits</a> for the quota/compliance context relevant to high-volume vendor traffic.</p>` },
   ],
 },
+
+
+
+
 
 
   
@@ -2483,7 +2473,7 @@ for p in positions:
 "place-gtt-order": {
   badge: { method: "POST", path: "/NorenWClientAPI/PlaceGTTOrder" },
 
-  desc: "Register a Good-Till-Triggered order: an order that stays dormant until the specified alert condition is met, at which point it's submitted to the exchange with the given order parameters. The GTT stays active until its validity_date.",
+  desc: "Register a Good-Till-Triggered order: an order that stays dormant until the specified LTP condition is met, at which point it's submitted to the exchange with the given order parameters.",
 
   sections: [
 
@@ -2497,8 +2487,7 @@ for p in positions:
     ` },
 
     { h: "Overview", body: `
-      <p>Place GTT Order is a superset of <a href="#" data-nav="set-alert">Set Alert</a>: it carries the same trigger-condition fields (<code>ai_t</code>, <code>d</code>, <code>validity</code>) plus an expiry (<code>validity_date</code>) and the full order payload (<code>trantype</code>, <code>prctyp</code>, <code>prd</code>, <code>qty</code>, <code>prc</code>, etc.) that gets submitted once the condition fires. Unlike <a href="#" data-nav="place-order">Place Order</a>, <code>prctyp</code> here also allows <code>MKT</code>, <code>DS</code>, <code>2L</code>, and <code>3L</code>.</p>
-      <p>Set <code>validity</code> to <code>GTT</code> and pass <code>validity_date</code> in <code>DD-MM-YYYY</code> format. If the condition is not met by that date, the GTT order expires without being sent to the exchange.</p>
+      <p>Place GTT Order is a superset of <a href="#" data-nav="set-alert">Set Alert</a>: it carries the same trigger-condition fields (<code>ai_t</code>, <code>d</code>, <code>validity</code>) plus the full order payload (<code>trantype</code>, <code>prctyp</code>, <code>prd</code>, <code>qty</code>, <code>prc</code>, etc.) that gets submitted once the condition fires. Unlike <a href="#" data-nav="place-order">Place Order</a>, <code>prctyp</code> here also allows <code>MKT</code>, <code>DS</code>, <code>2L</code>, and <code>3L</code>.</p>
     ` },
 
     { h: "Parameters", body: `
@@ -2508,18 +2497,17 @@ for p in positions:
         <tr><td>actid</td><td>string</td><td><span class="req-tag">Required</span></td><td>Login user's account ID.</td><td>Account-specific</td></tr>
         <tr><td>tsym</td><td>string</td><td><span class="req-tag">Required</span></td><td>Trading symbol.</td><td>Must exist in <a href="#" data-nav="symbol-master">Symbol Master</a></td></tr>
         <tr><td>exch</td><td>string</td><td><span class="req-tag">Required</span></td><td>Exchange segment.</td><td>See <a href="#" data-nav="exchange-segment-codes">Exchange Segment Codes</a></td></tr>
-        <tr><td>ai_t</td><td>string</td><td><span class="req-tag">Required</span></td><td>Alert type the trigger condition is evaluated against (e.g. <code>CH_PER_B_O</code>).</td><td>See <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a></td></tr>
-        <tr><td>d</td><td>string</td><td><span class="req-tag">Required</span></td><td>Value the alert condition is evaluated against; its meaning depends on <code>ai_t</code>.</td><td>Numeric string</td></tr>
-        <tr><td>validity</td><td>string</td><td><span class="req-tag">Required</span></td><td>Validity of the trigger. Use <code>GTT</code> for a good-till-triggered order.</td><td><code>DAY</code>, <code>GTT</code></td></tr>
-        <tr><td>validity_date</td><td>string</td><td><span class="req-tag">Required</span></td><td>Expiry date of the GTT order. Must be sent when <code>validity</code> is <code>GTT</code>.</td><td><code>DD-MM-YYYY</code> (e.g. <code>11-10-2026</code>), a future date</td></tr>
+        <tr><td>ai_t</td><td>string</td><td><span class="req-tag">Required</span></td><td>Alert type the trigger condition is evaluated against.</td><td>See <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a></td></tr>
+        <tr><td>validity</td><td>string</td><td><span class="req-tag">Required</span></td><td>Validity of the trigger.</td><td><code>DAY</code>, <code>GTT</code></td></tr>
+        <tr><td>d</td><td>string</td><td><span class="opt-tag">Optional</span></td><td>Value compared against LTP to decide when the order fires.</td><td>Numeric string</td></tr>
+        <tr><td>remarks</td><td>string</td><td><span class="req-tag">Required</span></td><td>Free-text message for identification.</td><td>Free text</td></tr>
         <tr><td>trantype</td><td>string</td><td><span class="req-tag">Required</span></td><td>Transaction type.</td><td><code>B</code> (Buy), <code>S</code> (Sell)</td></tr>
         <tr><td>prctyp</td><td>string</td><td><span class="req-tag">Required</span></td><td>Order type submitted on trigger.</td><td><code>LMT</code>, <code>MKT</code>, <code>SL-LMT</code>, <code>SL-MKT</code>, <code>DS</code>, <code>2L</code>, <code>3L</code></td></tr>
         <tr><td>prd</td><td>string</td><td><span class="req-tag">Required</span></td><td>Product type.</td><td><code>C</code>, <code>M</code>, <code>H</code></td></tr>
         <tr><td>ret</td><td>string</td><td><span class="req-tag">Required</span></td><td>Retention type of the resulting order (options depend on exchange).</td><td><code>DAY</code>, <code>EOS</code>, <code>IOC</code></td></tr>
         <tr><td>qty</td><td>integer</td><td><span class="req-tag">Required</span></td><td>Order quantity.</td><td>&gt; 0, lot-size multiple for derivatives</td></tr>
         <tr><td>prc</td><td>number</td><td><span class="req-tag">Required</span></td><td>Order price submitted on trigger.</td><td>&gt; 0</td></tr>
-        <tr><td>dscqty</td><td>integer</td><td><span class="opt-tag">Optional</span></td><td>Disclosed quantity. Send <code>0</code> for no disclosed quantity.</td><td>Max 10% (NSE), 50% (MCX)</td></tr>
-        <tr><td>remarks</td><td>string</td><td><span class="opt-tag">Optional</span></td><td>Free-text message for identification.</td><td>Free text</td></tr>
+        <tr><td>dscqty</td><td>integer</td><td><span class="opt-tag">Optional</span></td><td>Disclosed quantity.</td><td>Max 10% (NSE), 50% (MCX)</td></tr>
       </table>
     ` },
 
@@ -2529,19 +2517,18 @@ for p in positions:
 payload = {
     "uid": "AB1234",
     "actid": "AB1234",
-    "tsym": "ACC-EQ",
+    "tsym": "RELIANCE-EQ",
     "exch": "NSE",
-    "ai_t": "CH_PER_B_O",
-    "d": "206022",
+    "ai_t": "LTP",
     "validity": "GTT",
-    "validity_date": "11-10-2026",   # DD-MM-YYYY
+    "d": "2500",
+    "remarks": "gtt-breakout-buy",
     "trantype": "B",
     "prctyp": "LMT",
     "prd": "C",
     "ret": "DAY",
     "qty": "1",
-    "prc": "1412.80",
-    "dscqty": "0",
+    "prc": "2505.0",
 }
 data = f"jData={json.dumps(payload)}&jKey={accessToken}"
 
@@ -2559,19 +2546,18 @@ else:
       javascript: `const payload = {
   uid: "AB1234",
   actid: "AB1234",
-  tsym: "ACC-EQ",
+  tsym: "RELIANCE-EQ",
   exch: "NSE",
-  ai_t: "CH_PER_B_O",
-  d: "206022",
+  ai_t: "LTP",
   validity: "GTT",
-  validity_date: "11-10-2026", // DD-MM-YYYY
+  d: "2500",
+  remarks: "gtt-breakout-buy",
   trantype: "B",
   prctyp: "LMT",
   prd: "C",
   ret: "DAY",
   qty: "1",
-  prc: "1412.80",
-  dscqty: "0",
+  prc: "2505.0",
 };
 const data = \`jData=\${JSON.stringify(payload)}&jKey=\${accessToken}\`;
 
@@ -2585,7 +2571,7 @@ console.log(result.al_id ? \`GTT order placed: \${result.al_id}\` : \`Rejected: 
 
       curl: `curl -X POST https://api.shoonya.com/NorenWClientAPI/PlaceGTTOrder \\
   -H "Content-Type: application/x-www-form-urlencoded" \\
-  --data-urlencode 'jData={"uid":"AB1234","actid":"AB1234","tsym":"ACC-EQ","exch":"NSE","ai_t":"CH_PER_B_O","d":"206022","validity":"GTT","validity_date":"11-10-2026","trantype":"B","prctyp":"LMT","prd":"C","ret":"DAY","qty":"1","prc":"1412.80","dscqty":"0"}' \\
+  --data-urlencode 'jData={"uid":"AB1234","actid":"AB1234","tsym":"RELIANCE-EQ","exch":"NSE","ai_t":"LTP","validity":"GTT","d":"2500","remarks":"gtt-breakout-buy","trantype":"B","prctyp":"LMT","prd":"C","ret":"DAY","qty":"1","prc":"2505.0"}' \\
   --data-urlencode "jKey=$ACCESS_TOKEN"`,
     })}` },
 
@@ -2613,12 +2599,14 @@ console.log(result.al_id ? \`GTT order placed: \${result.al_id}\` : \`Rejected: 
 
     { h: "Best Practices", body: `<ul>
       <li>Check for <code>al_id</code> in the response before trusting the order is registered — <code>stat</code> is a free-form status string here, not a plain <code>Ok</code>/<code>Not_Ok</code> flag.</li>
-      <li>Always send <code>validity_date</code> in <code>DD-MM-YYYY</code> format with <code>validity: "GTT"</code>, and make sure it is a future date — a missing or malformed date is a common cause of rejection.</li>
       <li>Confirm the <code>ai_t</code> value against <a href="#" data-nav="enabled-gtt-orders">Get Enabled GTT Orders</a> before every placement — an unsupported alert type fails at request time, not silently.</li>
-      <li>Reconcile with <a href="#" data-nav="pending-gtt-orders">Get Pending GTT Order</a> after placing, the same way you'd reconcile a regular order against <a href="#" data-nav="order-book">Order Book</a> — a GTT order sits dormant until it triggers or reaches <code>validity_date</code>, so don't assume it's still there without checking.</li>
+      <li>Reconcile with <a href="#" data-nav="pending-gtt-orders">Get Pending GTT Order</a> after placing, the same way you'd reconcile a regular order against <a href="#" data-nav="order-book">Order Book</a> — a GTT order sits dormant for potentially a long time, so don't assume it's still there without checking.</li>
+      <li>Because the resulting order fires whenever the market later crosses your trigger, re-validate <code>prc</code> against the live circuit band and lot size at trigger time in your own monitoring — a GTT order placed weeks earlier can go stale relative to corporate actions, splits, or circuit changes.</li>
+      <li><code>MKT</code> is allowed here even though it's rejected on <a href="#" data-nav="place-order">Place Order</a> — decide deliberately whether you want price protection (<code>LMT</code>) or fill certainty (<code>MKT</code>) once triggered.</li>
     </ul>` },
   ],
 },
+
 // ---------------------------------------------------------------
 
 "cancel-gtt-order": {
@@ -4149,7 +4137,7 @@ ret = api.start_websocket(
   sections: [
 
     { h: "Overview", body: `<p>The <a href="https://github.com/Shoonya-API-OAuth-Python/Shoonya_API_OAuth" target="_blank" rel="noopener">Shoonya_API_OAuth</a> repo ships two runnable CLI scripts — <code>example_orders.py</code> and <code>example_market.py</code> — that exercise every major call through a simple <code>input()</code>-driven menu loop. They're the fastest way to confirm your credentials and see real request/response shapes before wiring anything into a strategy. Both scripts import the same wrapper class, <code>ShoonyaApiPy</code>, from <code>api_helper.py</code>.</p>
-    <div class="callout"><b>This is the actual SDK surface</b>Earlier pages on this site show a simplified/illustrative <code>ShoonyaClient</code> for readability. The real class is <code>ShoonyaApiPy</code> (also aliased <code>NorenApiPy</code> in some forks), and its method names — <code>place_order</code>, <code>get_quotes</code>, <code>searchscrip</code>, <code>start_websocket</code> — are what you'll actually import and call.</div>` },
+    <div class="callout"><b>This is the actual SDK surface</b>Earlier pages on this site show a simplified/illustrative <code>ShoonyaClient</code> for readability. The real class is <code>ShoonyaApiPy</code> (also aliased <code>NorenApiPy</code> in some forks), and its method names — <code>place_order</code>, <code>get_quotes</code>, <code>searchscrip</code>, <code>start_websocket</code> — are what you'll actually import and call.</p></div>` },
 
     { h: "Shared setup: OAuth login", body: `<p>Unlike the password/TOTP-based fork, this repo authenticates via the OAuth flow documented on <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> — redirect to the authorize URL, capture the <code>code</code>, then exchange it for a token:</p>
     ${codeBlock("python", `from api_helper import NorenApiPy
@@ -5095,3 +5083,6 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+
+
+
