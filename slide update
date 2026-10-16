@@ -1,0 +1,100 @@
+"auth-overview": {
+  badge: null,
+  desc: "How to authenticate against Shoonya, and what to know before you start.",
+  sections: [
+    { h: "Overview", body: `<p>Every Shoonya API call runs against an authenticated session. Shoonya issues a <code>Acesstoken</code> after a successful login, which you attach to every subsequent request. There is no separate long-lived API key model — the token itself is your credential, and it is valid for <strong>24 hours only</strong> from the moment it is generated.</p>` },
+    { h: "How to authenticate", body: `
+    <div class="card-grid">
+      <div class="mini-card"><div class="k">All integrations</div><div class="v">Manual Login (OAuth) — see <a href="#" data-nav="manual-login-oauth">guide</a></div></div>
+      <div class="mini-card"><div class="k">Ending a session</div><div class="v"><a href="#" data-nav="logout">Logout</a></div></div>
+    </div>
+    <p>OAuth is currently the only supported login flow — there is no TOTP auto-login and no separate token-renewal endpoint. See <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for the full authorize URL, redirect handling, and checksum reference.</p>` },
+    { h: "Session lifetime", body: `<p>An access token is valid for <strong>24 hours only</strong> from the time it is generated. Every fresh login must generate a new access token — tokens cannot be extended, refreshed, or reused once they expire. This is a SEBI compliance requirement for retail algo trading.</p>
+    <p>Since there's no renewal call, build your automation to re-run the full OAuth login flow for every new session rather than assuming a persistent long-running token — see <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for how to automate this.</p>
+    <div class="callout"><b>Convention</b>Every endpoint in this documentation that requires auth expects the token as a Bearer header: <code>Authorization: Bearer &lt;Acesstoken&gt;</code>.</div>` },
+    { h: "Security notes", body: `<ul>
+      <li>Never hardcode <code>client_id</code>, <code>secret_code</code>, or the OAuth <code>code</code>/checksum in source control — load them from environment variables or a secrets manager.</li>
+      <li>Treat <code>Acesstoken</code> as a bearer credential with the same sensitivity as a password: don't log it, don't put it in error messages sent to third-party monitoring tools.</li>
+      <li>If you suspect a token has leaked, call <a href="#" data-nav="logout">Logout</a> immediately to invalidate the session rather than waiting for the token to expire.</li>
+    </ul>` },
+    { h: "Notes", body: `<p>OAuth-specific security considerations (state parameter, PKCE, redirect URI validation) are covered on <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a>.</p>` },
+  ],
+},
+######################################################################################################################################################################################################
+
+"ip-whitelisting": {
+  badge: null,
+  desc: "Register the static IP address(es) your API requests will originate from — required before the OAuth login flow will work.",
+  sections: [
+    { h: "Overview", body: `<p>Shoonya only accepts authenticated API requests from IP addresses you've explicitly registered against your Client ID. Before you can complete the <a href="#" data-nav="manual-login-oauth">OAuth login flow</a> or call any endpoint, you need to whitelist the static IP (or IPs) your requests will come from, using the API Key Generation screen inside the trading account.</p>` },
+    { h: "Purpose", body: `<p>This is a one-time (or occasional, if your server IP changes) setup step — do this before writing any integration code, not while debugging a mysterious auth failure. It's also where you'll find your <code>Client ID</code> and <code>Secret Code</code>, both required inputs for the <a href="#" data-nav="manual-login-oauth">GenAcsTok checksum</a>.</p>` },
+    { h: "Steps", body: `<ol>
+      <li>Log in to your Shoonya trading account (web).</li>
+      <li>Click your profile icon, then open <strong>API Key Generation</strong>.</li>
+      <li>Confirm the <strong>Client ID</strong> shown matches the account you intend to trade through.</li>
+      <li>Reveal (eye icon) and copy the <strong>Secret Code</strong> — this is the <code>secret_code</code> input to the <a href="#" data-nav="manual-login-oauth">GenAcsTok checksum</a>. Treat it like a password; never commit it to source control.</li>
+      <li>Confirm the <strong>URL</strong> field shows the OAuth authorize endpoint for your IP type — <code>https://api.shoonya.com/OAuthlogin/authorize/oauth</code> if you registered an IPv4 address, or <code>https://trade.shoonya.com/OAuthlogin/authorize/oauth</code> if you registered an IPv6 address. See <strong>IP address format</strong> below.</li>
+      <li>Enter your <strong>Primary IP Address</strong> — the static public IPv4 or IPv6 address your requests will originate from (your server/VPS IP, not your laptop's home/office IP unless that's genuinely static).</li>
+      <li>Optionally set a <strong>Backup IP Address</strong> if you run a failover server.</li>
+      <li>If you expect to exceed 10 orders/second, check <strong>"Applicable for more than 10 orders per second"</strong> — see the callout below before enabling this.</li>
+      <li>Click <strong>Update</strong> to save.</li>
+    </ol>` },
+    { h: "IP address format", body: `<p>Both <strong>IPv4 and IPv6</strong> are supported for the primary/backup IP fields. Both full and compressed IPv6 formats are accepted. For example, <code>2001:0db8:0000:0000:0000:ff00:0042:8329</code> and the compressed format <code>2001:db8::ff00:42:8329</code> are valid IPv6 addresses.</p>
+    <p>The domain you use for the OAuth authorize URL depends on the IP version your requests originate from:</p>
+    <table class="param-table">
+      <tr><th>IP version</th><th>Domain</th><th>Authorize URL</th></tr>
+      <tr><td>IPv4</td><td><code>api.shoonya.com</code></td><td><code>https://api.shoonya.com/OAuthlogin/authorize/oauth</code></td></tr>
+      <tr><td>IPv6</td><td><code>trade.shoonya.com</code></td><td><code>https://trade.shoonya.com/OAuthlogin/authorize/oauth</code></td></tr>
+    </table>
+    <p>IPv4 is enabled on the <code>api.shoonya.com</code> domain. If your server connects over IPv6, change the domain in the redirect/authorize URL to <code>trade.shoonya.com</code>.</p>
+    <div class="callout warn"><b>Static IP required</b>The registered IP must be static. If you're running from a residential/dynamic-IP connection, requests will start failing with an auth/IP error whenever your ISP reassigns your address — host your integration on a server or VPS with a fixed IP instead.</div>` },
+    { h: "Order-rate checkbox and Algo ID", body: `<p>The <strong>"Applicable for more than 10 orders per second"</strong> checkbox is not a self-service performance toggle — ~10 orders/sec is the standard per-user order-placement ceiling described on <a href="#" data-nav="rate-limits">Rate Limits</a>. To legitimately exceed it, you must first submit your strategy to the exchange and obtain a SEBI Algo ID; see <a href="#" data-nav="algo-compliance">SEBI Algo ID Framework</a> for the approval process. Checking this box without a corresponding exchange-approved Algo ID does not raise your actual throughput — it only tells Shoonya to expect Algo ID-tagged traffic.</p>` },
+    { h: "After whitelisting", body: `<p>Once your IP is registered, continue to <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> to run the authorize → code → checksum → access-token exchange using the Client ID and Secret Code from this screen.</p>` },
+    { h: "Troubleshooting", body: `
+    <table class="param-table">
+      <tr><th>Symptom</th><th>Likely cause</th></tr>
+      <tr><td>OAuth/API calls fail immediately, even with a valid checksum</td><td>Requests are originating from an IP that isn't whitelisted — confirm the IP your server actually egresses on (it may differ from the IP you think it has, especially behind NAT/a load balancer) matches what's registered here.</td></tr>
+      <tr><td>Worked yesterday, failing today with no code changes</td><td>Your "static" IP was reassigned by your ISP/cloud provider. Re-check and update the Primary IP Address field.</td></tr>
+      <tr><td>Works from your laptop, fails from your server</td><td>You whitelisted your laptop's IP during testing instead of your production server's IP — update the field to the server's egress IP before deploying.</td></tr>
+      <tr><td>IPv6 server fails on the authorize/login step</td><td>The authorize URL is still using <code>api.shoonya.com</code> — IPv6 connections must use <code>trade.shoonya.com</code> instead.</td></tr>
+    </table>` },
+    { h: "Notes", body: `<p>See <a href="#" data-nav="vendors-partners">For Vendors / Partners</a> if you're integrating on behalf of multiple end users rather than trading a single account — vendor platforms generally handle IP whitelisting differently than a standalone OAuth user.</p>` },
+  ],
+},
+
+######################################################################################################################################################################################################
+
+"vendors-partners": {
+  badge: null,
+  desc: "Integration path for vendors and platform partners building on Shoonya's API on behalf of their own users.",
+  sections: [
+    { h: "Overview", body: `<p>Vendors and algo platforms integrating with Shoonya connect via a dedicated OAuth partner flow, separate from an individual user's own <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a>. A vendor integration lets your platform's users authenticate against their own Shoonya account without your platform ever handling their raw credentials.</p>` },
+    { h: "Currently integrated vendors", body: `
+    <table class="param-table">
+      <tr><th>Vendor</th><th>Status</th></tr>
+      <tr><td>AlgoTest</td><td>Integrated</td></tr>
+      <tr><td>Quantman</td><td>Integrated</td></tr>
+      <tr><td>Quantiply</td><td>Integrated</td></tr>
+    </table>
+    <p>For these vendors, the vendor's own integration handles connectivity at the platform level — individual end users of these platforms do <strong>not</strong> need to submit a static IP address to trade through Shoonya.</p>` },
+    { h: "OAuth authorize URL", body: `<p>Vendors initiate the login flow by directing their users to Shoonya's OAuth authorize endpoint, passing the <code>client_id</code> and a <code>state</code> value:</p>
+    ${codeBlock("text", `https://api.shoonya.com/OAuthlogin/authorize/oauth?client_id=Your_app_key&state=Your_state_value`)}
+    <p>Example:</p>
+    ${codeBlock("text", `https://api.shoonya.com/OAuthlogin/authorize/oauth?client_id=ABC123_U&state=ABC123`)}
+    <table class="param-table">
+      <tr><th>Parameter</th><th>Description</th></tr>
+      <tr><td><code>client_id</code></td><td>The app key issued to your vendor integration. Replace <code>Your_app_key</code> with your own key.</td></tr>
+      <tr><td><code>state</code></td><td>A unique, unguessable value generated by your platform for each login attempt. It is passed back unchanged on the redirect, so you can match the response to the original request and reject any callback with a missing or mismatched value (CSRF protection). It can also be used to identify which of your users started the login.</td></tr>
+    </table>
+    <p>After the user authenticates, Shoonya redirects back to your registered redirect URL with an authorization code and the same <code>state</code> value. Verify the <code>state</code> first, then exchange the code for an access token — see <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for the full code-exchange sequence.</p>` },
+    { h: "Getting integrated", body: `<ul>
+      <li>New vendor integrations require coordination with the API support team before going live — reach out to get an <code>app_key</code> issued and your redirect URL registered.</li>
+      <li>Generate a fresh <code>state</code> value for every authorize request and validate it on the redirect before processing the authorization code.</li>
+      <li>If your platform expects order volume near or above the <a href="#" data-nav="rate-limits">10 OPS threshold</a>, that needs to be flagged during onboarding as well, since it affects Algo ID classification per user.</li>
+    </ul>` },
+    { h: "Related", body: `<p>See <a href="#" data-nav="manual-login-oauth">Manual Login (OAuth)</a> for the token exchange steps following redirect, and <a href="#" data-nav="rate-limits">Rate Limits</a> for the quota/compliance context relevant to high-volume vendor traffic.</p>` },
+  ],
+},
+remove Token Renewal slide bar
+
+Remove Postback/webhook slide bar
